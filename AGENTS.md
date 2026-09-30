@@ -11,16 +11,22 @@ It may be shared with friends later.
 - Keep ordinary notes usable alongside calculations. Recognize only complete,
   unambiguous expressions and documented finance patterns.
 - Prioritize arithmetic, percentages, currency, simple interest, and Turkish
-  finance terminology. Stopaj is an optional explicit rate in interest inputs.
+  finance terminology.
 - Use English UI and English numeric formatting (`1,234.56`). Support Turkish
   finance aliases alongside English terms.
+- Accept `TL` and `TRY` case-insensitively as the same currency in all currency
+  inputs, including both source and destination positions. Normalize to `TRY`
+  internally for exchange-rate requests.
+- Accept leading-decimal literals such as `.75` as equivalent to `0.75`.
 - Programmer utilities are not a priority.
 - Keep source text separate from generated results.
 - Save scratches locally and preserve them across hides and restarts.
-- Keep financial assumptions visible, including tax rates, exchange-rate date
-  and type, and interest day-count conventions.
-- Do not silently choose an applicable statutory tax rate. Use explicit rates or
-  editable presets. Dedicated KDV helpers are deferred from the first release.
+- Keep financial assumptions visible, including exchange-rate date and type,
+  and interest day-count conventions.
+- Stopaj and KDV helpers are deferred from the first release. Manual deductions
+  use ordinary arithmetic. Do not silently choose statutory tax rates.
+- Gold prices per gram and TCMB deposit-rate data are optional future additions,
+  not requirements for the first draft.
 - Simple interest uses actual elapsed days with a visible, editable 365-day year
   basis initially. Do not assume compounding.
 - Number-format conventions must be explicit. Do not guess between ambiguous

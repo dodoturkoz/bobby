@@ -21,10 +21,15 @@ has not started.
 - Make progressive commits on a development branch and push after every commit.
 - English UI and numeric formatting (`1,234.56`).
 - Turkish finance aliases alongside English terms.
+- `TL` and `TRY` are interchangeable, case-insensitive currency inputs, whether
+  used as the source or destination. Normalize to `TRY` internally.
+- Accept leading decimals such as `.75` for ordinary arithmetic.
 - Simple interest with actual elapsed days and a visible, editable 365-day year
   basis initially.
-- Explicit tax rates or editable presets, with no automatic legal-rate choice.
-- Dedicated tax helpers are optional later additions, not first-release goals.
+- Omit stopaj and dedicated tax helpers from the first release. Manual
+  deductions use ordinary arithmetic.
+- Gold prices per gram and TCMB deposit-rate data are useful candidates for
+  later additions, not requirements for the first draft.
 - Native Swift macOS app targeting macOS 14 or later, with SwiftUI surrounding
   an AppKit editor.
 
@@ -34,23 +39,25 @@ has not started.
    scratches, local autosave and recovery, copy results, text/Markdown export.
 2. Arithmetic: parentheses, percentages, powers, number shorthand, and variables
    scoped to a scratch and evaluated from top to bottom.
-3. Currency: explicit currency codes and TL/TRY aliases, cached reference rates,
-   source and observation date, visible stale/offline state.
+3. Currency: explicit currency codes, interchangeable case-insensitive TL/TRY
+   aliases, cached reference rates, source and observation date, and visible
+   stale/offline state.
 4. Simple interest: principal, annual rate, duration, visible day-count basis,
-   optional withholding, gross interest, withholding amount, net interest, and
-   final balance.
+   gross interest, and final balance before any deductions.
 
 Accepted input examples:
 
 ```text
 11.5m * 2%
-500 USD to TRY
-500k TL %40 yıllık 32 gün stopaj %15
+500 USD to TL
+500 tl to usd
+500k TL %40 yıllık 32 gün
 ```
 
-The stopaj percentage above is an illustrative user-supplied assumption, not a
-statutory default. The interest helper shows gross interest, withholding, net
-interest, and final balance.
+Manual adjustments use ordinary arithmetic and can reference an earlier
+variable, for example `interest * .75`. Leading decimal `.75` is equivalent to
+`0.75`. The interest helper itself shows gross interest and the final balance
+before any deductions.
 
 ## Technical direction
 
@@ -84,8 +91,7 @@ interest, and final balance.
    record the agreed contract here.
 2. Build the native editor shell with local saving and keyboard behavior.
 3. Add and test arithmetic, ordered variables, and live result presentation.
-4. Add and test simple interest and optional withholding with visible
-   assumptions.
+4. Add and test simple interest with visible assumptions.
 5. Add exchange-rate fetching, caching, attribution, and offline behavior.
 6. Use Bobby for real daily calculations, address friction, and package a local
    app. Discuss signing and distribution when sharing becomes relevant.
@@ -97,9 +103,21 @@ loan amortization, portfolio tracking, automatic statutory tax classification,
 date/time utilities, networking, AI, rich math rendering, accounts, sync, and
 direct integrations with other note-taking apps.
 
-Dedicated KDV helpers and broader Turkish finance conveniences can be added
-later using explicit rates. Product/category-specific rate selection is outside
-the initial scope. Compounding is also deferred initially.
+Stopaj, dedicated KDV helpers, and broader Turkish finance conveniences can be
+considered later. Product/category-specific rate selection is outside the initial
+scope. Compounding is also deferred initially.
+
+Future reference-data candidates:
+
+- Gold price per gram in TL: settle the source, purity, quote type (buy, sell, or
+  reference), and observation timestamp before integrating a feed.
+- TCMB deposit-interest data: settle the relevant series, currency, term, and
+  observation dates before integrating it. Treat these sector averages as dated
+  benchmarks, not individual bank offers. TCMB's methodology annualizes and
+  compounds rates, so do not silently insert them into the simple-interest
+  calculator without an explicit conversion/convention.
+
+Neither data feed is required for the first draft.
 
 ## Background sources
 
@@ -108,3 +126,6 @@ the initial scope. Compounding is also deferred initially.
 - [GIB 2026 temporary Article 67 guide](https://cdn.gib.gov.tr/api/gibportal-file/file/getFile?objectKey=DUYURU%2FUNIVERSAL%2F2026%2F2026_Gecici67.pdf):
   background showing that withholding treatment depends on context and dates.
   This is not an automatically maintained source of current rates.
+- [TCMB weekly deposit-interest data](https://www.tcmb.gov.tr/wps/wcm/connect/TR/TCMB%2BTR/Main%2BMenu/Istatistikler/Faiz%2BIstatistikleri/Haftalik/Mevduat%2BFaiz%2BOranlari/)
+  and [methodology](https://www.tcmb.gov.tr/wps/wcm/connect/c1731b0f-de47-46ad-92c5-cc2c3d2942d3/RIPMetaveri-1_Haftal%C4%B1k_Mevduat_Ag%C4%B1rl%C4%B1kl%C4%B1_Ortalama_Faiz.pdf?MOD=AJPERES):
+  candidate later benchmark source and rate conventions.
