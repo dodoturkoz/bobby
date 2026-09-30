@@ -166,7 +166,8 @@ final class AppModel: ObservableObject {
 
     func exportScratch(markdown: Bool = false) {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "\(currentTitle).\(markdown ? "md" : "txt")"
+        let filename = currentTitle.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+        panel.nameFieldStringValue = "\(filename).\(markdown ? "md" : "txt")"
         panel.title = "Save this scratch"
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do { try currentText.write(to: url, atomically: true, encoding: .utf8) }

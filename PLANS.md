@@ -7,9 +7,10 @@ calculations. Turkish finance terminology and useful local conventions are part
 of the intended experience. The first audience is the owner, with possible
 distribution to friends later.
 
-Status: the first native implementation is built and its automated tests pass.
-Editor, arithmetic, interest, local persistence, and currency conversion are
-implemented. Interactive app verification and final packaging are in progress.
+Status: the first local release is built. All 59 automated tests pass. Live
+editing, reactive answers, currency lookup, answer copying, and saved-scratch
+restoration have been verified in the native app. Cross-app shortcut behavior
+still needs a manual check before broader distribution.
 
 ## Agreed decisions
 
@@ -108,14 +109,16 @@ Resolved implementation choices:
 1. Completed: settle scope, input conventions, and native architecture, and
    record the agreed contract here.
 2. Implemented: native editor shell, local saving, independent scratches, and
-   keyboard commands. Interactive behavior is under verification.
+   keyboard commands. Editing, copying, launch focus, and restoration are
+   verified. Cross-app global shortcut registration is implemented.
 3. Implemented and tested: arithmetic, ordered variables, live results, and
    copyable numerical presentation.
 4. Implemented and tested: simple interest with visible assumptions.
 5. Implemented and tested: exchange-rate fetching, caching, attribution, and
    offline behavior. The actual provider route was also verified.
-6. In progress: interactive app verification and release packaging. Next, use
-   Bobby for daily calculations and address friction. Discuss notarization,
+6. Complete for local use: release packaging and core interactive verification.
+   Next, use Bobby for daily calculations and address friction. Manually check
+   the cross-app shortcut before broader distribution. Discuss notarization,
    supported architectures, and distribution when sharing becomes relevant.
 
 ## Deferred features

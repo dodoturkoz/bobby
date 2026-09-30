@@ -126,6 +126,11 @@ final class ResultTextView: NSTextView {
 
     override func cancelOperation(_ sender: Any?) { onHide?() }
 
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 && !hasMarkedText() { onHide?() }
+        else { super.keyDown(with: event) }
+    }
+
     func layoutResults() {
         guard let layoutManager, let textContainer else { return }
         let desiredWidth = max(180, bounds.width - resultWidth - textContainerInset.width * 2)
@@ -178,6 +183,7 @@ final class ResultTextView: NSTextView {
             addSubview(button)
             resultButtons.append(button)
         }
+        setAccessibilityChildren(resultButtons)
         needsDisplay = true
     }
 

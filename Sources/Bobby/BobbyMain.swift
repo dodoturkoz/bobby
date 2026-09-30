@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var window: NSWindow!
     private var statusItem: NSStatusItem!
     private let shortcut = GlobalShortcut()
+    private var rateTimer: Timer?
     private var subscriptions = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -57,10 +58,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         }.store(in: &subscriptions)
         model.$isPinned.sink { [weak self] pinned in self?.window.level = pinned ? .floating : .normal }
             .store(in: &subscriptions)
+        rateTimer = Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.model.refreshRates(force: false) }
+        }
         show()
     }
 
-    func applicationWillTerminate(_ notification: Notification) { model?.flushSave() }
+    func applicationWillTerminate(_ notification: Notification) { rateTimer?.invalidate(); model?.flushSave() }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func windowShouldClose(_ sender: NSWindow) -> Bool { hide(); return false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { show(); return true }
@@ -69,6 +73,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         if let editor = findEditor(in: window.contentView) { window.makeFirstResponder(editor) }
+        else {
+            DispatchQueue.main.async { [weak self] in
+                guard let self, self.window.isKeyWindow, let editor = self.findEditor(in: self.window.contentView) else { return }
+                self.window.makeFirstResponder(editor)
+            }
+        }
         model.refreshRates(force: false)
     }
 

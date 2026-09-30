@@ -50,6 +50,10 @@ It may be shared with friends later.
 - Currency variables wait for their rate, then recalculate in source order.
 - Default global shortcut: Control+Option+B. Registration uses Carbon hotkeys,
   so it does not require Accessibility permission.
+- Handle Escape explicitly in the editor, since NSTextView's standard key
+  binding can invoke completion. Give the editor focus after the hosting view
+  is constructed, and expose result buttons through Accessibility children.
+- Periodic rate refreshes must enter the main actor before updating app state.
 - Use decimal arithmetic for money and rates. Round for presentation or an
   explicitly defined financial rule rather than at arbitrary intermediate steps.
 - Keep the calculation engine independent from UI and network access.
