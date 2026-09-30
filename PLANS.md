@@ -52,7 +52,8 @@ live examples and isolation from saved scratches have been verified.
 6. Usability refinement: currency pairs without amounts show unit rates, full
    names resolve directly, and ambiguous names or supported alternative interest
    phrases produce explicit review proposals. Show rate attribution inline and
-   support intentional horizontal trackpad navigation between scratches.
+   support interactive horizontal trackpad paging between scratches, with live
+   movement, neighboring previews, threshold completion, and edge resistance.
 
 Accepted input examples:
 
@@ -102,6 +103,9 @@ Resolved implementation choices:
 
 - A continuous AppKit plain-text editor with aligned result buttons in a right
   gutter. Copying an answer does not insert it into the source text.
+- Interactive scratch paging keeps one live editor beneath clipped snapshot
+  layers. Previewing another scratch does not edit it or request exchange rates.
+  Reduce Motion uses a direct switch instead of sliding.
 - Ordered assignments use `name = expression`. Trailing `=` is not required
   for evaluation. Unresolved currency assignments wait for rate data.
 - Postfix percentage is a scalar (`10% = 0.1`), with standard arithmetic

@@ -125,6 +125,13 @@ final class AppModel: ObservableObject {
         select(collection.scratches[target].id)
     }
 
+    func neighborPreview(_ offset: Int) -> ScratchPagePreview? {
+        guard let index = collection.scratches.firstIndex(where: { $0.id == collection.selectedID }),
+              collection.scratches.indices.contains(index + offset) else { return nil }
+        let scratch = collection.scratches[index + offset]
+        return ScratchPagePreview(id: scratch.id, text: scratch.text, results: [])
+    }
+
     func deleteCurrent() {
         guard let id = collection.selectedID else { return }
         let alert = NSAlert()

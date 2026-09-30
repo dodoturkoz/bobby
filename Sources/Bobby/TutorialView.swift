@@ -193,7 +193,7 @@ struct TutorialView: View {
     private var scratchFeatures: some View {
         VStack(spacing: 12) {
             featureRow(icon: "square.stack", title: "A fresh scratch for each thought",
-                       detail: "Use + or ⌘N. Choose a scratch in the sidebar, use the arrows, or swipe left and right with two fingers over the editor.")
+                       detail: "Use + or ⌘N. Choose a scratch in the sidebar, use the arrows, or swipe with two fingers to preview the next scratch. Swipe far enough and release to switch, or make a short swipe to settle back.")
             featureRow(icon: "internaldrive", title: "Saved on this Mac",
                        detail: "Bobby saves as you write. Your scratches return when you reopen the app, and stay in place when you hide it.")
             featureRow(icon: "doc.on.doc", title: "Take an answer with you",

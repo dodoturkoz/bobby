@@ -84,8 +84,10 @@ available, and Command+Shift+C copies the selected practice answer.
 - `Command+N`: new scratch.
 - `Command+Shift+C`: copy the answer on the current line.
 - `Command+Option+Left/Right`: previous/next scratch.
-- Two-finger horizontal swipe over the editor: previous/next scratch, with
-  vertical gestures reserved for scrolling. Navigation stops at the first/last scratch.
+- Two-finger horizontal swipe over the editor: slide the text and answers to
+  preview the adjacent scratch. Release past the threshold to switch, or make a
+  short swipe to settle back. The first and last scratch resist further movement.
+  Vertical gestures scroll. Reduce Motion uses a direct switch on release.
 - `Command+Shift+S`: export source text. Markdown export is in the More menu.
 
 Scratches autosave locally, survive restarts, and are deleted only when you

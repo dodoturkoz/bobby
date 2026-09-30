@@ -9,50 +9,38 @@ struct ScratchEditor: NSViewRepresentable {
     let onCopy: (String) -> Void
     let onSelection: (Int) -> Void
     let onHide: () -> Void
-    var onNavigate: ((ScratchNavigationDirection) -> Void)? = nil
+    var onNavigate: ((ScratchNavigationDirection) -> UUID?)? = nil
+    var selectedScratchID: (() -> UUID?)? = nil
     var yearBasis: Int = 365
+    var previousPage: ScratchPagePreview? = nil
+    var nextPage: ScratchPagePreview? = nil
+    var onPreviewResults: ((String) -> [DisplayResult])? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
+    static func dismantleNSView(_ pager: ScratchPagerView, coordinator: Coordinator) {
+        let scroll = pager.scrollView
         (scroll.documentView as? ResultTextView)?.closeInterestReview()
-        (scroll as? ScratchNavigationScrollView)?.onNavigate = nil
+        pager.cancelTransition()
+        pager.onNavigate = nil
     }
 
-    func makeNSView(context: Context) -> NSScrollView {
+    func makeNSView(context: Context) -> ScratchPagerView {
         context.coordinator.isSynchronizing = true
         defer { context.coordinator.isSynchronizing = false }
-        let scroll = ScratchNavigationScrollView()
-        scroll.onNavigate = onNavigate
+        let pager = ScratchPagerView(frame: NSRect(x: 0, y: 0, width: 760, height: 450))
+        pager.onNavigate = onNavigate
+        pager.selectedScratchID = selectedScratchID
+        pager.onPreviewResults = onPreviewResults
+        context.coordinator.pager = pager
+        let scroll = pager.scrollView
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         scroll.drawsBackground = false
         let editor = ResultTextView(frame: NSRect(x: 0, y: 0, width: 760, height: 450))
         editor.delegate = context.coordinator
-        editor.isRichText = false
-        editor.isAutomaticQuoteSubstitutionEnabled = false
-        editor.isAutomaticDashSubstitutionEnabled = false
-        editor.isAutomaticTextReplacementEnabled = false
-        editor.isAutomaticSpellingCorrectionEnabled = false
-        editor.isContinuousSpellCheckingEnabled = false
-        editor.isGrammarCheckingEnabled = false
-        editor.allowsUndo = true
-        editor.isVerticallyResizable = true
-        editor.isHorizontallyResizable = false
-        editor.autoresizingMask = [.width]
-        editor.minSize = NSSize(width: 0, height: 450)
-        editor.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
-        editor.textContainerInset = NSSize(width: 28, height: 24)
-        editor.textContainer?.widthTracksTextView = false
-        editor.font = .monospacedSystemFont(ofSize: 16, weight: .regular)
-        editor.textColor = .labelColor
-        editor.insertionPointColor = .controlAccentColor
-        editor.backgroundColor = .textBackgroundColor
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.paragraphSpacing = 20
-        paragraph.minimumLineHeight = 24
-        editor.defaultParagraphStyle = paragraph
-        editor.typingAttributes = [.font: editor.font!, .paragraphStyle: paragraph, .foregroundColor: NSColor.labelColor]
+        editor.configureScratchAppearance()
+        editor.onPrepareInteraction = { [weak pager] in pager?.prepareForInteraction() ?? true }
         editor.setAccessibilityLabel("Scratch text")
         editor.setAccessibilityIdentifier("scratch-editor")
         editor.string = text
@@ -63,14 +51,18 @@ struct ScratchEditor: NSViewRepresentable {
         editor.displayResults = results
         scroll.documentView = editor
         context.coordinator.scratchID = scratchID
-        return scroll
+        pager.updatePages(currentID: scratchID, text: text, previous: previousPage, next: nextPage)
+        return pager
     }
 
-    func updateNSView(_ scroll: NSScrollView, context: Context) {
+    func updateNSView(_ pager: ScratchPagerView, context: Context) {
+        let scroll = pager.scrollView
         context.coordinator.parent = self
         context.coordinator.isSynchronizing = true
         defer { context.coordinator.isSynchronizing = false }
-        (scroll as? ScratchNavigationScrollView)?.onNavigate = onNavigate
+        pager.onNavigate = onNavigate
+        pager.selectedScratchID = selectedScratchID
+        pager.onPreviewResults = onPreviewResults
         guard let editor = scroll.documentView as? ResultTextView else { return }
         editor.onCopy = onCopy
         editor.onHide = onHide
@@ -91,26 +83,32 @@ struct ScratchEditor: NSViewRepresentable {
         }
         editor.displayResults = results
         editor.layoutResults()
+        pager.updatePages(currentID: scratchID, text: text, previous: previousPage, next: nextPage)
     }
 
     final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: ScratchEditor
         var scratchID: UUID?
         var isSynchronizing = false
+        weak var pager: ScratchPagerView?
         init(_ parent: ScratchEditor) { self.parent = parent }
 
         func textDidChange(_ notification: Notification) {
-            guard !isSynchronizing else { return }
+            guard !isSynchronizing, pager?.isAwaitingEditor != true else { return }
             guard let editor = notification.object as? ResultTextView else { return }
             parent.text = editor.string
             editor.layoutResults()
         }
 
         func textViewDidChangeSelection(_ notification: Notification) {
-            guard !isSynchronizing else { return }
+            guard !isSynchronizing, pager?.isAwaitingEditor != true else { return }
             guard let editor = notification.object as? NSTextView else { return }
             let prefix = (editor.string as NSString).substring(to: min(editor.selectedRange().location, (editor.string as NSString).length))
             parent.onSelection(prefix.filter { $0 == "\n" }.count)
+        }
+
+        func textView(_ textView: NSTextView, shouldChangeTextIn affectedCharRange: NSRange, replacementString: String?) -> Bool {
+            isSynchronizing || (pager?.prepareForInteraction() ?? true)
         }
     }
 }
@@ -119,12 +117,40 @@ final class ResultTextView: NSTextView {
     var displayResults: [DisplayResult] = [] { didSet { needsLayout = true } }
     var onCopy: ((String) -> Void)?
     var onHide: (() -> Void)?
+    var onPrepareInteraction: (() -> Bool)?
     private var resultButtons: [NSButton] = []
     private var resultValues: [ObjectIdentifier: String] = [:]
     private var resultSuggestions: [ObjectIdentifier: (Int, String, CalculationSuggestion)] = [:]
     private var interestReviewPanel: NSPanel?
     var representedScratchID: UUID?
     private let resultWidth: CGFloat = 246
+
+    func configureScratchAppearance() {
+        isRichText = false
+        isAutomaticQuoteSubstitutionEnabled = false
+        isAutomaticDashSubstitutionEnabled = false
+        isAutomaticTextReplacementEnabled = false
+        isAutomaticSpellingCorrectionEnabled = false
+        isContinuousSpellCheckingEnabled = false
+        isGrammarCheckingEnabled = false
+        allowsUndo = true
+        isVerticallyResizable = true
+        isHorizontallyResizable = false
+        autoresizingMask = [.width]
+        minSize = NSSize(width: 0, height: 450)
+        maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        textContainerInset = NSSize(width: 28, height: 24)
+        textContainer?.widthTracksTextView = false
+        font = .monospacedSystemFont(ofSize: 16, weight: .regular)
+        textColor = .labelColor
+        insertionPointColor = .controlAccentColor
+        backgroundColor = .textBackgroundColor
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.paragraphSpacing = 20
+        paragraph.minimumLineHeight = 24
+        defaultParagraphStyle = paragraph
+        typingAttributes = [.font: font!, .paragraphStyle: paragraph, .foregroundColor: NSColor.labelColor]
+    }
 
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
@@ -152,8 +178,14 @@ final class ResultTextView: NSTextView {
     override func cancelOperation(_ sender: Any?) { onHide?() }
 
     override func keyDown(with event: NSEvent) {
+        guard onPrepareInteraction?() != false else { return }
         if event.keyCode == 53 && !hasMarkedText() { onHide?() }
         else { super.keyDown(with: event) }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard onPrepareInteraction?() != false else { return }
+        super.mouseDown(with: event)
     }
 
     func layoutResults() {
@@ -221,6 +253,7 @@ final class ResultTextView: NSTextView {
     }
 
     @objc private func copyResult(_ button: NSButton) {
+        guard onPrepareInteraction?() != false else { return }
         if let (lineIndex, expectedLine, suggestion) = resultSuggestions[ObjectIdentifier(button)] {
             let lines = string.components(separatedBy: "\n")
             guard lines.indices.contains(lineIndex), lines[lineIndex] == expectedLine else { return }

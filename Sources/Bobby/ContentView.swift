@@ -28,7 +28,12 @@ struct ContentView: View {
                 ScratchEditor(text: Binding(get: { model.currentText }, set: model.updateText),
                               scratchID: model.collection.selectedID, results: model.results,
                               onCopy: model.copy, onSelection: { model.selectedLine = $0 }, onHide: onHide,
-                              onNavigate: { model.navigate($0 == .next ? 1 : -1) }, yearBasis: model.collection.yearBasis)
+                              onNavigate: {
+                                  model.navigate($0 == .next ? 1 : -1)
+                                  return model.collection.selectedID
+                              }, selectedScratchID: { model.collection.selectedID }, yearBasis: model.collection.yearBasis,
+                              previousPage: model.neighborPreview(-1), nextPage: model.neighborPreview(1),
+                              onPreviewResults: { model.previewResults(for: $0, yearBasis: model.collection.yearBasis) })
             }
             Divider()
             footer

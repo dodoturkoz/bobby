@@ -11,6 +11,7 @@ let package = Package(
     targets: [
         .target(name: "BobbyCore"),
         .executableTarget(name: "Bobby", dependencies: ["BobbyCore"]),
-        .testTarget(name: "BobbyCoreTests", dependencies: ["BobbyCore"])
+        .testTarget(name: "BobbyCoreTests", dependencies: ["BobbyCore"]),
+        .testTarget(name: "BobbyTests", dependencies: ["Bobby"])
     ]
 )

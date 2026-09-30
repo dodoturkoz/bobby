@@ -3,8 +3,9 @@
 Run `scripts/test.sh` before committing a behavior change. The suite exercises
 decimal calculations, strict numbers, source-order variables, incomplete typing,
 currency names and confirmations, interest review, line edits, gesture lifecycle,
-rate presentation and offline caching, and persistence recovery. Tests use
-deterministic quotes rather than today's changing prices.
+rate presentation and offline caching, and persistence recovery. Offscreen AppKit
+tests verify paging snapshots, clipping, editor handoff, cancellation, and native
+Undo. Tests use deterministic quotes rather than today's changing prices.
 
 Build with `scripts/build-app.sh` and check the native flows below. Prefer the
 tutorial's separate practice editor for input checks. Preserve existing scratches.
@@ -51,9 +52,15 @@ dependent lines wait until the proposal is confirmed.
 - While a review is open, scratch creation/navigation/export and answer-copy
   commands must not operate the underlying saved scratch.
 - With at least two existing scratches, swipe left/right over the main editor.
-  One intentional gesture changes one scratch. Vertical, short, diagonal,
-  cancelled, and momentum gestures must not trigger extra navigation. Stop at
-  the first and last scratches. Check with real hardware for physical direction.
+  Text and answers should follow the fingers, with the adjacent scratch sliding
+  into view. The header, footer, and sidebar should stay still. Release past the
+  threshold to change one scratch. Short or cancelled swipes settle back without
+  changing text, selection, or Undo. Reversing direction should preview the other
+  neighbor. At the first and last scratch, movement should resist and settle back.
+  Vertical, diagonal, and momentum gestures must not trigger extra navigation.
+  Editing, resizing, losing focus, or opening a sheet should safely cancel a
+  pending slide. Reduce Motion should switch directly on release. Check physical
+  direction and animation feel with a real trackpad.
 - Check button and keyboard navigation, autosave, relaunch restoration, the
   configured global shortcut, and Escape hide/show after editor changes.
 

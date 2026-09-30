@@ -84,9 +84,22 @@ It may be shared with friends later.
   has detached. Activation and sheet dismissal can finish asynchronously, so
   retry focus on the main queue and use the window's end-sheet notification.
 - Periodic rate refreshes must enter the main actor before updating app state.
-- Intentional horizontal trackpad gestures navigate saved scratches once at
-  gesture end. Keep vertical scrolling, cancellation, and momentum independent,
-  clamp navigation at the ends, and leave tutorial practice swipes disabled.
+- Intentional horizontal trackpad gestures slide a clipped preview of adjacent
+  scratches and navigate once after release past a viewport-relative threshold.
+  Keep one live editor beneath snapshot layers so short swipes preserve selection
+  and Undo. Hold the incoming preview until destination text, results, and scratch
+  identity synchronize with the model's actual selection. Keep the editing lock
+  through visual cancellation during handoff, including Reduce Motion. Never
+  unlock an outgoing document based on a timeout. Invalidate stale animation
+  completions on cancellation.
+  Calculate neighbor previews lazily during the gesture, without fetching rates
+  or modifying source text. Cancel on editing, resize, sheets, or lost window
+  focus. Preserve vertical scrolling and consume horizontal momentum without extra
+  navigation. Resist at the ends, respect Reduce Motion, and disable paging in the
+  tutorial practice editor.
+- Native UI regression tests render AppKit views offscreen, with no visible
+  windows or changes to saved scratches. Keep physical trackpad direction and
+  animation feel in the manual checks in QA.md.
 - Use CheckedDecimalMath for multiplication and division. Foundation can return
   an incorrect finite value at extreme exponents even when it reports success.
 - Descend to the deepest attached sheet for focus and global-shortcut handling.
