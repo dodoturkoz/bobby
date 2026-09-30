@@ -58,6 +58,9 @@ It may be shared with friends later.
 - Handle Escape explicitly in the editor, since NSTextView's standard key
   binding can invoke completion. Give the editor focus after the hosting view
   is constructed, and expose result buttons through Accessibility children.
+- Put space between calculation rows in paragraphSpacing, not lineSpacing.
+  TextKit includes lineSpacing in populated-line caret height, producing an
+  oversized insertion point compared with the empty trailing line.
 - When showing the app with an attached sheet, focus the sheet's editor rather
   than the saved scratch beneath it. Restore main-editor focus after the sheet
   has detached. Activation and sheet dismissal can finish asynchronously, so

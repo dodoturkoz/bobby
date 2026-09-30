@@ -38,7 +38,7 @@ struct ScratchEditor: NSViewRepresentable {
         editor.insertionPointColor = .controlAccentColor
         editor.backgroundColor = .textBackgroundColor
         let paragraph = NSMutableParagraphStyle()
-        paragraph.lineSpacing = 20
+        paragraph.paragraphSpacing = 20
         paragraph.minimumLineHeight = 24
         editor.defaultParagraphStyle = paragraph
         editor.typingAttributes = [.font: editor.font!, .paragraphStyle: paragraph, .foregroundColor: NSColor.labelColor]
