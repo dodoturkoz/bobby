@@ -208,9 +208,26 @@ final class AppModel: ObservableObject {
     }
 
     private func recalculate() {
-        let evaluations = engine.evaluate(currentText, yearBasis: collection.yearBasis,
+        results = renderedResults(for: currentText, yearBasis: collection.yearBasis, requestMissingRates: true)
+    }
+
+    func previewResults(for text: String, yearBasis: Int) -> [DisplayResult] {
+        renderedResults(for: text, yearBasis: yearBasis, requestMissingRates: false)
+    }
+
+    func preparePreviewRates(for text: String, yearBasis: Int, forceRefresh: Bool = false) {
+        let pairs = Set(engine.evaluate(text, yearBasis: yearBasis,
+                                       rates: quotes.mapValues { $0.quote.rate }).compactMap { $0.conversion?.pair })
+        for pair in pairs where forceRefresh || (quotes[pair] == nil && rateErrors[pair] == nil) {
+            if forceRefresh { rateErrors[pair] = nil }
+            request(pair, force: forceRefresh)
+        }
+    }
+
+    private func renderedResults(for text: String, yearBasis: Int, requestMissingRates: Bool) -> [DisplayResult] {
+        let evaluations = engine.evaluate(text, yearBasis: yearBasis,
                                           rates: quotes.mapValues { $0.quote.rate })
-        results = evaluations.map { evaluation in
+        return evaluations.map { evaluation in
             if let conversion = evaluation.conversion {
                 let pair = conversion.pair
                 if let lookup = quotes[pair] {
@@ -235,7 +252,7 @@ final class AppModel: ObservableObject {
                     return DisplayResult(lineIndex: evaluation.lineIndex, text: "Rate unavailable", detail: "Refresh to retry",
                                          tooltip: error, isError: true, copyText: nil)
                 }
-                request(pair)
+                if requestMissingRates { request(pair) }
                 return DisplayResult(lineIndex: evaluation.lineIndex, text: "Getting rate…", detail: "\(pair.base) → \(pair.quote)",
                                      tooltip: "Fetching a dated reference rate.", isError: false, copyText: nil)
             }

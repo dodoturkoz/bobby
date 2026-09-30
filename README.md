@@ -56,6 +56,15 @@ Currency answers use Frankfurter's dated blended reference rates. Hover to see
 the rate, source, and date. Previously fetched quotes remain available offline.
 Refresh rates from the More menu.
 
+## Tutorial
+
+Choose **Take a tour** in the header or menu to open six short lessons covering
+maths, variables, currency, simple interest, scratches, and shortcuts. The first
+four include editable examples with live answers and reset controls. Currency
+practice supports rate refresh, and interest practice has its own year picker.
+Tutorial examples and settings do not change your saved scratches. Escape
+closes the tutorial, and Command+Shift+C copies the selected practice answer.
+
 ## Keyboard and storage
 
 - `Control+Option+B`: show or hide Bobby from any app, configurable in Settings.

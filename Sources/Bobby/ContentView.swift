@@ -4,6 +4,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var model: AppModel
     let onHide: () -> Void
+    let onFocusScratch: () -> Void
     @State private var showSidebar = false
 
     var body: some View {
@@ -33,8 +34,8 @@ struct ContentView: View {
         }
         .background(Color(nsColor: .textBackgroundColor))
         .tint(.teal)
-        .sheet(isPresented: $model.showHelp) { help }
-        .sheet(isPresented: $model.showSettings) { settings }
+        .sheet(isPresented: $model.showHelp, onDismiss: onFocusScratch) { TutorialView(model: model) }
+        .sheet(isPresented: $model.showSettings, onDismiss: onFocusScratch) { settings }
     }
 
     private var header: some View {
@@ -46,6 +47,11 @@ struct ContentView: View {
                 Text("A little room for your numbers.").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
+            Button { model.showHelp = true } label: {
+                Label("Take a tour", systemImage: "sparkles")
+                    .font(.system(size: 12, weight: .medium))
+            }
+            .help("Try Bobby's features in a separate practice scratch")
             HStack(spacing: 5) {
                 Button { model.navigate(-1) } label: { Image(systemName: "chevron.left") }
                     .help("Previous scratch, ⌘⌥←")
@@ -66,7 +72,7 @@ struct ContentView: View {
                 Divider()
                 Button("Refresh exchange rates") { model.refreshRates() }
                 Button("Settings…") { model.showSettings = true }
-                Button("Examples & shortcuts") { model.showHelp = true }
+                Button("Take a tour") { model.showHelp = true }
                 Divider()
                 Button("Delete scratch…", role: .destructive) { model.deleteCurrent() }
             } label: { Image(systemName: "ellipsis") }.menuStyle(.borderlessButton).frame(width: 26)
@@ -107,38 +113,10 @@ struct ContentView: View {
                 ForEach([360, 365, 366], id: \.self) { Text("\($0) days").tag($0) }
             }.labelsHidden().frame(width: 92).controlSize(.small)
             Button { model.showHelp = true } label: { Image(systemName: "questionmark.circle") }
-                .buttonStyle(.borderless).help("Examples and shortcuts")
+                .buttonStyle(.borderless).help("Tutorial and shortcuts")
         }
         .padding(.horizontal, 22).padding(.vertical, 11)
         .background(Color(nsColor: .windowBackgroundColor))
-    }
-
-    private var help: some View {
-        VStack(alignment: .leading, spacing: 17) {
-            Text("Think on the page.").font(.title2.weight(.semibold))
-            Text("Write a note or a calculation. Answers appear alongside your text. Click an answer to copy it, or hover for its details.")
-                .foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            VStack(alignment: .leading, spacing: 9) {
-                example("11.5m * 2%", "Arithmetic, percentages, k and m shorthand")
-                example("rent = 25000\nrent * 12", "Variables apply to the lines below them")
-                example("500 USD to TL", "TL and TRY both work, including lowercase")
-                example("interest = 500k TL %40 yıllık 32 gün", "Simple interest, using the selected year basis")
-                example("interest * .75", "Adjust any amount with ordinary maths")
-                example("500k TRY at 40% for 32 days", "English finance syntax works too")
-            }
-            Text("⌘N new scratch · ⌘⇧C copy this line's answer · Esc hide\n\(GlobalShortcut.choices.first(where: { $0.id == model.shortcutChoice })?.label ?? "⌃⌥B") show/hide Bobby from any app")
-                .font(.caption).foregroundStyle(.secondary)
-            Text("Currency answers use dated reference rates. Your notes stay on this Mac.")
-                .font(.caption).foregroundStyle(.secondary)
-            HStack { Spacer(); Button("Done") { model.showHelp = false }.keyboardShortcut(.defaultAction) }
-        }.padding(28).frame(width: 560)
-    }
-
-    private func example(_ input: String, _ description: String) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(input).font(.system(size: 13, design: .monospaced)).textSelection(.enabled)
-            Text(description).font(.caption).foregroundStyle(.secondary)
-        }
     }
 
     private var settings: some View {

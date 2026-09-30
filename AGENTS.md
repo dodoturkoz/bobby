@@ -20,6 +20,11 @@ It may be shared with friends later.
 - Accept leading-decimal literals such as `.75` as equivalent to `0.75`.
 - Programmer utilities are not a priority.
 - Keep source text separate from generated results.
+- Keep tutorial examples and their year basis in temporary view state. Preview
+  calculation must not modify scratches or trigger network work during rendering.
+  Prepare missing rates separately and revisit dependent conversions when rates
+  arrive. Route copy-answer to the tutorial and block background scratch commands
+  while a sheet is open.
 - Save scratches locally and preserve them across hides and restarts.
 - Keep financial assumptions visible, including exchange-rate date and type,
   and interest day-count conventions.
@@ -53,6 +58,10 @@ It may be shared with friends later.
 - Handle Escape explicitly in the editor, since NSTextView's standard key
   binding can invoke completion. Give the editor focus after the hosting view
   is constructed, and expose result buttons through Accessibility children.
+- When showing the app with an attached sheet, focus the sheet's editor rather
+  than the saved scratch beneath it. Restore main-editor focus after the sheet
+  has detached. Activation and sheet dismissal can finish asynchronously, so
+  retry focus on the main queue and use the window's end-sheet notification.
 - Periodic rate refreshes must enter the main actor before updating app state.
 - Use decimal arithmetic for money and rates. Round for presentation or an
   explicitly defined financial rule rather than at arbitrary intermediate steps.

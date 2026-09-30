@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import OSLog
 import SwiftUI
 
 @main
@@ -16,13 +17,14 @@ enum BobbyMain {
 }
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMenuItemValidation {
     private var model: AppModel!
     private var window: NSWindow!
     private var statusItem: NSStatusItem!
     private let shortcut = GlobalShortcut()
     private var rateTimer: Timer?
     private var subscriptions = Set<AnyCancellable>()
+    private let windowLog = Logger(subsystem: "com.dodoturkoz.bobby", category: "Window")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         model = AppModel()
@@ -33,7 +35,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         window.minSize = NSSize(width: 820, height: 420)
         window.isReleasedWhenClosed = false
         window.delegate = self
-        window.contentView = NSHostingView(rootView: ContentView(model: model, onHide: { [weak self] in self?.hide() }))
+        window.contentView = NSHostingView(rootView: ContentView(model: model,
+            onHide: { [weak self] in self?.hide() }, onFocusScratch: { [weak self] in self?.focusEditor(preferScratch: true) }))
         window.center()
         window.setFrameAutosaveName("BobbyScratchWindow")
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -44,11 +47,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         add("New scratch", action: #selector(newScratch), to: menu)
         menu.addItem(.separator())
         add("Settings…", action: #selector(settings), to: menu)
-        add("Examples & shortcuts", action: #selector(help), to: menu)
+        add("Take a tour", action: #selector(help), to: menu)
         menu.addItem(.separator())
         add("Quit Bobby", action: #selector(quit), to: menu)
         statusItem.menu = menu
-        shortcut.onTrigger = { [weak self] in self?.toggleWindow() }
+        shortcut.onTrigger = { [weak self] in
+            guard let self else { return }
+            self.windowLog.notice("Global shortcut received")
+            self.toggleWindow()
+        }
         model.$shortcutChoice.removeDuplicates().sink { [weak self] choice in
             guard let self else { return }
             let success = self.shortcut.register(choice)
@@ -68,21 +75,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func windowShouldClose(_ sender: NSWindow) -> Bool { hide(); return false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { show(); return true }
+    func windowDidEndSheet(_ notification: Notification) {
+        DispatchQueue.main.async { [weak self] in self?.focusEditor(preferScratch: true) }
+    }
 
     private func show() {
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        if let editor = findEditor(in: window.contentView) { window.makeFirstResponder(editor) }
-        else {
-            DispatchQueue.main.async { [weak self] in
-                guard let self, self.window.isKeyWindow, let editor = self.findEditor(in: self.window.contentView) else { return }
-                self.window.makeFirstResponder(editor)
-            }
-        }
+        focusEditor()
+        windowLog.notice("Scratchpad shown")
         model.refreshRates(force: false)
     }
 
-    private func hide() { model.flushSave(); window.orderOut(nil) }
+    private func focusEditor(preferScratch: Bool = false) {
+        guard window.isVisible else { return }
+        if preferScratch && window.attachedSheet != nil { return }
+        let target = preferScratch ? window! : (window.attachedSheet ?? window!)
+        if let editor = findEditor(in: target.contentView) { target.makeFirstResponder(editor) }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, !preferScratch || (!self.hasSheet) else { return }
+            let target = preferScratch ? self.window! : (self.window.attachedSheet ?? self.window!)
+            guard target.isKeyWindow, let editor = self.findEditor(in: target.contentView) else { return }
+            target.makeFirstResponder(editor)
+        }
+    }
+
+    private func hide() {
+        model.flushSave()
+        window.orderOut(nil)
+        windowLog.notice("Scratchpad hidden")
+    }
 
     private func findEditor(in view: NSView?) -> NSTextView? {
         guard let view else { return nil }
@@ -91,16 +113,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     }
 
     @objc private func toggleWindow() {
-        if window.isVisible && window.isKeyWindow { hide() } else { show() }
+        if window.isVisible && (window.isKeyWindow || window.attachedSheet?.isKeyWindow == true) { hide() }
+        else { show() }
     }
-    @objc private func newScratch() { model.newScratch(); show() }
-    @objc private func copyResult() { model.copyCurrentResult() }
-    @objc private func exportText() { model.exportScratch() }
-    @objc private func exportMarkdown() { model.exportScratch(markdown: true) }
-    @objc private func previousScratch() { model.navigate(-1) }
-    @objc private func nextScratch() { model.navigate(1) }
-    @objc private func settings() { show(); model.showSettings = true }
-    @objc private func help() { show(); model.showHelp = true }
+    private var hasSheet: Bool { model.showHelp || model.showSettings || window.attachedSheet != nil }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        guard let action = menuItem.action else { return true }
+        if action == #selector(copyResult) { return !hasSheet || model.showHelp }
+        let scratchActions: [Selector] = [#selector(newScratch), #selector(exportText), #selector(exportMarkdown),
+                                          #selector(previousScratch), #selector(nextScratch), #selector(settings), #selector(help)]
+        return !scratchActions.contains(action) || !hasSheet
+    }
+
+    @objc private func newScratch() { guard !hasSheet else { return }; model.newScratch(); show() }
+    @objc private func copyResult() {
+        if model.showHelp { NotificationCenter.default.post(name: Notification.Name("BobbyCopyTutorialAnswer"), object: nil) }
+        else if !hasSheet { model.copyCurrentResult() }
+    }
+    @objc private func exportText() { guard !hasSheet else { return }; model.exportScratch() }
+    @objc private func exportMarkdown() { guard !hasSheet else { return }; model.exportScratch(markdown: true) }
+    @objc private func previousScratch() { guard !hasSheet else { return }; model.navigate(-1) }
+    @objc private func nextScratch() { guard !hasSheet else { return }; model.navigate(1) }
+    @objc private func settings() { guard !hasSheet else { return }; show(); model.showSettings = true }
+    @objc private func help() { guard !hasSheet else { return }; show(); model.showHelp = true }
     @objc private func quit() { NSApp.terminate(nil) }
 
     private func buildMenu() {
@@ -132,7 +168,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
             to: navigation, modifiers: [.command, .option])
         add("Next scratch", action: #selector(nextScratch), key: String(UnicodeScalar(NSRightArrowFunctionKey)!),
             to: navigation, modifiers: [.command, .option])
-        add("Examples & shortcuts", action: #selector(help), to: navigation)
+        add("Take a tour", action: #selector(help), to: navigation)
         for submenu in [appMenu, file, edit, navigation] {
             let item = NSMenuItem()
             item.title = submenu.title

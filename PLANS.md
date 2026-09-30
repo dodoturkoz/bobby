@@ -10,7 +10,8 @@ distribution to friends later.
 Status: the first local release is built. All 59 automated tests pass. Live
 editing, reactive answers, currency lookup, answer copying, and saved-scratch
 restoration have been verified in the native app. Cross-app shortcut behavior
-still needs a manual check before broader distribution.
+has been confirmed by the owner. The guided tutorial is implemented and its
+live examples and isolation from saved scratches have been verified.
 
 ## Agreed decisions
 
@@ -45,6 +46,8 @@ still needs a manual check before broader distribution.
    stale/offline state.
 4. Simple interest: principal, annual rate, duration, visible day-count basis,
    gross interest, and final balance before any deductions.
+5. Guided tutorial: six concise lessons with live editable examples, independent
+   practice settings, and a reference for scratches, copying, and shortcuts.
 
 Accepted input examples:
 
@@ -117,9 +120,11 @@ Resolved implementation choices:
 5. Implemented and tested: exchange-rate fetching, caching, attribution, and
    offline behavior. The actual provider route was also verified.
 6. Complete for local use: release packaging and core interactive verification.
-   Next, use Bobby for daily calculations and address friction. Manually check
-   the cross-app shortcut before broader distribution. Discuss notarization,
-   supported architectures, and distribution when sharing becomes relevant.
+   The owner confirmed cross-app shortcut activation and editor focus. The
+   guided tutorial covers the main features without modifying saved scratches.
+   Next, use Bobby for daily calculations and address friction. Discuss
+   notarization, supported architectures, and distribution when sharing becomes
+   relevant.
 
 ## Deferred features
 
