@@ -1,15 +1,65 @@
 # Bobby
 
-A native macOS 14+ personal finance scratchpad for quick maths, currency
-conversions, and simple interest, with results that appear as you type.
+Bobby is a small macOS scratchpad for quick maths, currency conversions, and
+simple interest. Type a calculation, see the answer, and keep notes alongside it.
 
-Bobby uses SwiftUI around a continuous AppKit plain-text editor. It accepts TL
-and TRY interchangeably, uses English UI and number formatting, and supports
-English and Turkish finance input. It has no third-party dependencies.
+Open it with a keyboard shortcut whenever you need a little room for your
+numbers. Keep separate scratches for different thoughts, with everything saved
+on your Mac.
+
+## Examples
+
+```text
+11.5m * 2%
+0.1 + 0.2
+rent = 25000
+rent * 12
+500 USD to TL
+TL euro
+interest = 500k TL at 40% for 32 days
+interest * .75
+```
+
+Answers update as you type. Click one to copy it, or hover for details. Named
+values let you reuse a calculation on later lines in the same scratch.
+
+Bobby understands English and Turkish finance terms, with English number
+formatting (`1,234.56`). When supported wording needs clarification, it offers an
+interpretation for you to review.
+
+Currency conversions show their source and date. These are reference rates,
+which may differ from your bank's quote. Cached rates remain available offline,
+and you can refresh them from the More menu.
+
+Interest calculations show gross interest and the final balance before
+deductions. They use simple interest with a visible year basis, initially 365
+days, which you can change in the footer.
+
+## Tutorial
+
+Choose **Take a tour** for six short lessons and examples you can play with.
+The practice area is separate from your saved scratches, so feel free to try
+things out. Press Escape or click outside to close it.
+
+## Keyboard and storage
+
+- `Control+Option+B`: show or hide Bobby from any app, configurable in Settings.
+- `Escape`: hide the scratchpad.
+- `Command+N`: new scratch.
+- `Command+Shift+C`: copy the answer on the current line.
+- `Command+Option+Left/Right`: previous/next scratch.
+- `Command+Shift+S`: export source text. Markdown export is in the More menu.
+
+You can also swipe left or right with two fingers to preview a neighboring
+scratch. Swipe far enough and release to switch, or make a short swipe to settle
+back. Scroll vertically as usual.
+
+Scratches autosave and return when you reopen Bobby. There is no account or
+cloud sync. Local data lives in `~/Library/Application Support/Bobby/`.
 
 ## Run locally
 
-Install Xcode or its command-line tools with Swift 5.9 or later, then run:
+Requires macOS 14 or later and Xcode or its command-line tools with Swift 5.9+.
 
 ```sh
 scripts/run-app.sh
@@ -22,78 +72,8 @@ scripts/build-app.sh
 open build/Bobby.app
 ```
 
-The generated app is ad-hoc signed for local use on the build machine's
-architecture. Public distribution and notarization are outside this first draft.
-You can also open `Package.swift` in Xcode.
-
-## Examples
-
-```text
-11.5m * 2%
-0.1 + 0.2
-rent = 25000
-rent * 12
-500 USD to TL
-500 tl to usd
-USD Turkish lira
-TL euro
-3 USD to lira
-interest = 500k TL %40 yıllık 32 gün
-interest * .75
-500k TRY at 40% for 32 days
-3 years interest at 42%
-```
-
-Results appear alongside source text. Click an answer to copy it and hover for
-details. Variables apply to later lines in the same scratch and recalculate when
-you change their definition. Currency variables recalculate after rates arrive.
-A pair such as `TL euro` shows the one-unit rate with extra precision. Full names
-such as `Turkish lira` resolve directly. Ambiguous `lira` or `dollars` produces a
-specific confirmation, and clicking it updates just that line with native undo.
-
-Numbers use English punctuation (`1,234.56`), `k`/`m` shorthand, and leading
-decimals such as `.75`. Percentages are ordinary scalars, so `10%` means `0.1`.
-Powers use integer exponents. Plain notes and incomplete expressions stay quiet.
-
-Interest is simple, using elapsed days and the visible year basis (365 by
-default). The footer offers 360/365/366, and an input may end with `basis 360`.
-The result shows gross interest and the final balance before deductions.
-Alternative phrases such as `3 years interest at 42%` open a review that asks for
-the missing principal and shows the annual simple-interest assumption. The
-confirmed expression includes its basis so later footer changes cannot alter it.
-
-Currency answers show Frankfurter and the rate date alongside the value. Hover
-for the contributing providers and quote type. Previously fetched quotes remain
-available offline.
-Refresh rates from the More menu.
-
-## Tutorial
-
-Choose **Take a tour** in the header or menu to open six short lessons covering
-maths, variables, currency, simple interest, scratches, and shortcuts. The first
-four include editable examples with live answers and reset controls. Currency
-practice supports rate refresh, and interest practice has its own year picker.
-Tutorial examples and settings do not change your saved scratches. Escape
-or a click outside closes the tutorial. The labeled Close button is also
-available, and Command+Shift+C copies the selected practice answer.
-
-## Keyboard and storage
-
-- `Control+Option+B`: show or hide Bobby from any app, configurable in Settings.
-- `Escape`: hide the scratchpad.
-- `Command+N`: new scratch.
-- `Command+Shift+C`: copy the answer on the current line.
-- `Command+Option+Left/Right`: previous/next scratch.
-- Two-finger horizontal swipe over the editor: slide the text and answers to
-  preview the adjacent scratch. Release past the threshold to switch, or make a
-  short swipe to settle back. The first and last scratch resist further movement.
-  Vertical gestures scroll. Reduce Motion uses a direct switch on release.
-- `Command+Shift+S`: export source text. Markdown export is in the More menu.
-
-Scratches autosave locally, survive restarts, and are deleted only when you
-choose to delete them. Data is in `~/Library/Application Support/Bobby/`.
-Unreadable scratch files are preserved and saving pauses so you can export
-new work. No account or cloud sync is involved.
+The app is signed for local use on the build machine's architecture. Distribution
+and notarization can come later. You can also open `Package.swift` in Xcode.
 
 ## Development
 
@@ -101,9 +81,10 @@ new work. No account or cloud sync is involved.
 scripts/test.sh
 ```
 
-`Sources/BobbyCore` contains the deterministic decimal engine, result
-presentation, versioned persistence, and asynchronous exchange-rate cache.
-`Sources/Bobby` contains the native editor, window, shortcut, and app model.
+Bobby uses SwiftUI around an AppKit text editor, with no third-party dependencies.
+`Sources/BobbyCore` holds calculations, exchange rates, and storage.
+`Sources/Bobby` holds the native app. Tests cover both the core and offscreen
+editor behavior.
 
 See [PLANS.md](PLANS.md) for direction and deferred features.
 See [QA.md](QA.md) for repeatable native interaction checks.

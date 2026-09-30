@@ -127,3 +127,5 @@ It may be shared with friends later.
 
 - Respond in English unless the user explicitly requests Turkish.
 - Do not use em dashes in prose. Avoid semicolons unless necessary.
+- Keep the README relaxed and focused on the app's uses. Do not lead with minor
+  input conveniences or implementation details. Keep examples concise.
