@@ -7,9 +7,9 @@ calculations. Turkish finance terminology and useful local conventions are part
 of the intended experience. The first audience is the owner, with possible
 distribution to friends later.
 
-Status: the product scope and input conventions are settled enough for a first
-version. Repository setup and planning are authorized. The native architecture
-choice is awaiting confirmation before substantial application implementation.
+Status: first-release scope, input conventions, and native architecture are
+agreed. Repository setup and planning are complete. Application implementation
+has not started.
 
 ## Agreed decisions
 
@@ -25,6 +25,8 @@ choice is awaiting confirmation before substantial application implementation.
   basis initially.
 - Explicit tax rates or editable presets, with no automatic legal-rate choice.
 - Dedicated tax helpers are optional later additions, not first-release goals.
+- Native Swift macOS app targeting macOS 14 or later, with SwiftUI surrounding
+  an AppKit editor.
 
 ## Proposed first release
 
@@ -50,10 +52,10 @@ The stopaj percentage above is an illustrative user-supplied assumption, not a
 statutory default. The interest helper shows gross interest, withholding, net
 interest, and final balance.
 
-## Proposed technical direction
+## Technical direction
 
-- Native macOS app in Swift.
-- SwiftUI for surrounding controls and AppKit for the text editor if needed.
+- Native macOS 14+ app in Swift.
+- SwiftUI for surrounding controls and AppKit for the text editor.
 - A deterministic parser/evaluator, independent of the UI and network. Start
   with arithmetic and a small documented grammar for finance helpers.
 - Complete recognized lines get live results beside the editable text.
@@ -65,10 +67,6 @@ interest, and final balance.
 - Frankfurter v2 is the candidate exchange-rate service. It supplies reference
   rates, not a promise of a particular bank's executable buy/sell quote.
 - English UI and numeric formatting with English/Turkish finance aliases.
-
-## Decisions to settle before implementation
-
-- Confirm native macOS in Swift. Recommended minimum: macOS 14.
 
 ## Implementation decisions to document
 
@@ -82,7 +80,8 @@ interest, and final balance.
 
 ## Milestones
 
-1. Settle scope and input conventions, then record the agreed contract here.
+1. Completed: settle scope, input conventions, and native architecture, and
+   record the agreed contract here.
 2. Build the native editor shell with local saving and keyboard behavior.
 3. Add and test arithmetic, ordered variables, and live result presentation.
 4. Add and test simple interest and optional withholding with visible

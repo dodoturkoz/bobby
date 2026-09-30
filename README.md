@@ -1,7 +1,8 @@
 # Bobby
 
-A personal finance scratchpad for quick maths, currency conversions, and small
-finance calculations, with results that appear as you type.
+A native macOS 14+ personal finance scratchpad for quick maths, currency
+conversions, and small finance calculations, with results that appear as you
+type. Planned implementation: Swift, SwiftUI, and an AppKit editor.
 
 Bobby is in the scope and planning stage. The intended first version focuses on
 arithmetic, percentages, simple interest with optional explicit stopaj, and

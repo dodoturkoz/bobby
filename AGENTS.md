@@ -6,7 +6,7 @@ It may be shared with friends later.
 
 ## Product direction
 
-- Finish the scope discussion before substantial app implementation.
+- Discuss material scope expansions before implementing them.
 - Show results immediately as the user types. Do not require a trailing `=`.
 - Keep ordinary notes usable alongside calculations. Recognize only complete,
   unambiguous expressions and documented finance patterns.
@@ -28,7 +28,8 @@ It may be shared with friends later.
 
 ## Architecture and validation
 
-- Native Swift with SwiftUI and an AppKit editor is proposed, not yet settled.
+- Build a native Swift app for macOS 14 or later, with SwiftUI for surrounding
+  controls and AppKit for the editor.
 - No application scaffold exists, so no build or test commands exist yet.
 - Use decimal arithmetic for money and rates. Round for presentation or an
   explicitly defined financial rule rather than at arbitrary intermediate steps.
