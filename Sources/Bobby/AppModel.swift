@@ -10,6 +10,8 @@ struct DisplayResult: Equatable {
     let tooltip: String
     let isError: Bool
     let copyText: String?
+    var suggestion: CalculationSuggestion? = nil
+    var sourceLine: String? = nil
 }
 
 @MainActor
@@ -112,6 +114,7 @@ final class AppModel: ObservableObject {
         let scratch = Scratch(text: "")
         collection.scratches.append(scratch)
         collection.selectedID = scratch.id
+        selectedLine = 0
         recalculate()
         scheduleSave()
     }
@@ -136,6 +139,7 @@ final class AppModel: ObservableObject {
             collection.scratches = [Scratch(text: "")]
         }
         collection.selectedID = collection.scratches[min(index, collection.scratches.count - 1)].id
+        selectedLine = 0
         recalculate()
         scheduleSave()
     }
@@ -225,28 +229,22 @@ final class AppModel: ObservableObject {
     }
 
     private func renderedResults(for text: String, yearBasis: Int, requestMissingRates: Bool) -> [DisplayResult] {
+        let sourceLines = text.components(separatedBy: "\n")
         let evaluations = engine.evaluate(text, yearBasis: yearBasis,
                                           rates: quotes.mapValues { $0.quote.rate })
         return evaluations.map { evaluation in
             if let conversion = evaluation.conversion {
                 let pair = conversion.pair
                 if let lookup = quotes[pair] {
-                    var amount = conversion.amount
-                    var rate = lookup.quote.rate
-                    var value = Decimal()
-                    let calculation = NSDecimalMultiply(&value, &amount, &rate, .bankers)
-                    guard calculation == .noError || calculation == .lossOfPrecision, !value.isNaN else {
-                        return DisplayResult(lineIndex: evaluation.lineIndex, text: "Amount too large", detail: "",
-                                             tooltip: "The converted amount exceeds Decimal precision.", isError: true, copyText: nil)
+                    do {
+                        let display = try ExchangeRatePresentation.make(request: conversion, lookup: lookup,
+                                                                        isRefreshing: requests[pair] != nil)
+                        return DisplayResult(lineIndex: evaluation.lineIndex, text: display.valueText, detail: display.detail,
+                                             tooltip: display.tooltip, isError: false, copyText: display.copyText)
+                    } catch {
+                        return DisplayResult(lineIndex: evaluation.lineIndex, text: "Calculation error", detail: "Check the amount or rate",
+                                             tooltip: error.localizedDescription, isError: true, copyText: nil)
                     }
-                    let currency = pair.quote == "TRY" ? "TL" : pair.quote
-                    let text = "\(NumberFormatting.string(value, maximumFractionDigits: 2)) \(currency)"
-                    let date = lookup.quote.observedDate
-                    let cache = lookup.usedOfflineCache ? " · offline cache" : ""
-                    let detail = "\(date)\(cache)\(requests[pair] == nil ? "" : " · refreshing")"
-                    let tooltip = "1 \(pair.base) = \(NumberFormatting.string(rate)) \(currency)\n\(lookup.quote.sourceLabel)\n\(lookup.quote.rateType)\nRate date: \(date)\(cache)"
-                    return DisplayResult(lineIndex: evaluation.lineIndex, text: text, detail: detail,
-                                         tooltip: tooltip, isError: false, copyText: text)
                 }
                 if let error = rateErrors[pair] {
                     return DisplayResult(lineIndex: evaluation.lineIndex, text: "Rate unavailable", detail: "Refresh to retry",
@@ -260,7 +258,9 @@ final class AppModel: ObservableObject {
             let text = CalculationPresentation.valueText(evaluation)
             return DisplayResult(lineIndex: evaluation.lineIndex, text: text, detail: CalculationPresentation.detail(evaluation),
                                  tooltip: CalculationPresentation.tooltip(evaluation),
-                                 isError: error, copyText: error ? nil : text)
+                                 isError: error, copyText: error || evaluation.kind == .suggestion ? nil : text,
+                                 suggestion: evaluation.suggestion,
+                                 sourceLine: evaluation.suggestion == nil ? nil : sourceLines[evaluation.lineIndex])
         }
     }
 

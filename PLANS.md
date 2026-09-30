@@ -7,7 +7,8 @@ calculations. Turkish finance terminology and useful local conventions are part
 of the intended experience. The first audience is the owner, with possible
 distribution to friends later.
 
-Status: the first local release is built. All 59 automated tests pass. Live
+Status: the first local release is built. Core automated tests cover calculations,
+input recognition, reviewed suggestions, rate presentation, gestures, and storage. Live
 editing, reactive answers, currency lookup, answer copying, and saved-scratch
 restoration have been verified in the native app. Cross-app shortcut behavior
 has been confirmed by the owner. The guided tutorial is implemented and its
@@ -48,6 +49,10 @@ live examples and isolation from saved scratches have been verified.
    gross interest, and final balance before any deductions.
 5. Guided tutorial: six concise lessons with live editable examples, independent
    practice settings, and a reference for scratches, copying, and shortcuts.
+6. Usability refinement: currency pairs without amounts show unit rates, full
+   names resolve directly, and ambiguous names or supported alternative interest
+   phrases produce explicit review proposals. Show rate attribution inline and
+   support intentional horizontal trackpad navigation between scratches.
 
 Accepted input examples:
 
@@ -72,6 +77,10 @@ before any deductions.
 - Complete recognized lines get live results beside the editable text.
   Ordinary prose remains plain text. Incomplete input should not produce noisy
   errors while the user is typing.
+- Controlled English-first wording flexibility, with existing Turkish aliases
+  retained. Deterministic, anchored phrases can propose a canonical expression.
+  Ambiguous wording requires acceptance, and missing principal is never guessed.
+  Broad natural-language interpretation remains deferred.
 - Decimal arithmetic for financial values, with defined rounding behavior.
 - Simple versioned local persistence initially. Choose a database only if the
   actual storage requirements justify it.

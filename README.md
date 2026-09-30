@@ -35,14 +35,21 @@ rent = 25000
 rent * 12
 500 USD to TL
 500 tl to usd
+USD Turkish lira
+TL euro
+3 USD to lira
 interest = 500k TL %40 yıllık 32 gün
 interest * .75
 500k TRY at 40% for 32 days
+3 years interest at 42%
 ```
 
 Results appear alongside source text. Click an answer to copy it and hover for
 details. Variables apply to later lines in the same scratch and recalculate when
 you change their definition. Currency variables recalculate after rates arrive.
+A pair such as `TL euro` shows the one-unit rate with extra precision. Full names
+such as `Turkish lira` resolve directly. Ambiguous `lira` or `dollars` produces a
+specific confirmation, and clicking it updates just that line with native undo.
 
 Numbers use English punctuation (`1,234.56`), `k`/`m` shorthand, and leading
 decimals such as `.75`. Percentages are ordinary scalars, so `10%` means `0.1`.
@@ -51,9 +58,13 @@ Powers use integer exponents. Plain notes and incomplete expressions stay quiet.
 Interest is simple, using elapsed days and the visible year basis (365 by
 default). The footer offers 360/365/366, and an input may end with `basis 360`.
 The result shows gross interest and the final balance before deductions.
+Alternative phrases such as `3 years interest at 42%` open a review that asks for
+the missing principal and shows the annual simple-interest assumption. The
+confirmed expression includes its basis so later footer changes cannot alter it.
 
-Currency answers use Frankfurter's dated blended reference rates. Hover to see
-the rate, source, and date. Previously fetched quotes remain available offline.
+Currency answers show Frankfurter and the rate date alongside the value. Hover
+for the contributing providers and quote type. Previously fetched quotes remain
+available offline.
 Refresh rates from the More menu.
 
 ## Tutorial
@@ -73,6 +84,8 @@ available, and Command+Shift+C copies the selected practice answer.
 - `Command+N`: new scratch.
 - `Command+Shift+C`: copy the answer on the current line.
 - `Command+Option+Left/Right`: previous/next scratch.
+- Two-finger horizontal swipe over the editor: previous/next scratch, with
+  vertical gestures reserved for scrolling. Navigation stops at the first/last scratch.
 - `Command+Shift+S`: export source text. Markdown export is in the More menu.
 
 Scratches autosave locally, survive restarts, and are deleted only when you
@@ -91,3 +104,4 @@ presentation, versioned persistence, and asynchronous exchange-rate cache.
 `Sources/Bobby` contains the native editor, window, shortcut, and app model.
 
 See [PLANS.md](PLANS.md) for direction and deferred features.
+See [QA.md](QA.md) for repeatable native interaction checks.

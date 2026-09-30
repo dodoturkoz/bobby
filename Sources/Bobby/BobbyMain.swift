@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private var rateTimer: Timer?
     private var tutorialDismissalMonitor: Any?
     private var tutorialOutsideAppMonitor: Any?
+    private var tutorialPresentedAt: TimeInterval?
     private var subscriptions = Set<AnyCancellable>()
     private let windowLog = Logger(subsystem: "com.dodoturkoz.bobby", category: "Window")
 
@@ -47,13 +48,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             let location = self.window.convertPoint(toScreen: event.locationInWindow)
             guard !sheet.frame.contains(location) else { return event }
             self.windowLog.notice("Tutorial dismissed by a background click")
+            self.closeNestedSheets(in: sheet)
             self.model.showHelp = false
             return nil
         }
-        tutorialOutsideAppMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
+        tutorialOutsideAppMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] event in
             guard let self, self.model.showHelp, self.window.isVisible,
-                  self.window.attachedSheet != nil else { return }
+                  self.window.attachedSheet != nil,
+                  let presentedAt = self.tutorialPresentedAt, event.timestamp > presentedAt else { return }
             self.windowLog.notice("Tutorial dismissed by a click in another app")
+            if let sheet = self.window.attachedSheet { self.closeNestedSheets(in: sheet) }
             self.model.showHelp = false
         }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -68,6 +72,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         menu.addItem(.separator())
         add("Quit Bobby", action: #selector(quit), to: menu)
         statusItem.menu = menu
+        model.$showHelp.sink { [weak self] showing in
+            // Global monitors can deliver an activation click after the sheet
+            // has opened. That older event must not dismiss the new tutorial.
+            self?.tutorialPresentedAt = showing ? ProcessInfo.processInfo.systemUptime : nil
+        }.store(in: &subscriptions)
         shortcut.onTrigger = { [weak self] in
             guard let self else { return }
             self.windowLog.notice("Global shortcut received")
@@ -112,14 +121,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private func focusEditor(preferScratch: Bool = false) {
         guard window.isVisible else { return }
         if preferScratch && window.attachedSheet != nil { return }
-        let target = preferScratch ? window! : (window.attachedSheet ?? window!)
+        let target = preferScratch ? window! : deepestSheet(of: window!)
         if let editor = findEditor(in: target.contentView) { target.makeFirstResponder(editor) }
         DispatchQueue.main.async { [weak self] in
             guard let self, !preferScratch || (!self.hasSheet) else { return }
-            let target = preferScratch ? self.window! : (self.window.attachedSheet ?? self.window!)
+            let target = preferScratch ? self.window! : self.deepestSheet(of: self.window!)
             guard target.isKeyWindow, let editor = self.findEditor(in: target.contentView) else { return }
             target.makeFirstResponder(editor)
         }
+    }
+
+    private func deepestSheet(of parent: NSWindow) -> NSWindow {
+        var target = parent
+        while let child = target.attachedSheet { target = child }
+        return target
+    }
+
+    private func closeNestedSheets(in parent: NSWindow) {
+        guard let child = parent.attachedSheet else { return }
+        closeNestedSheets(in: child)
+        parent.endSheet(child)
+        child.orderOut(nil)
     }
 
     private func hide() {
@@ -135,14 +157,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     }
 
     @objc private func toggleWindow() {
-        if window.isVisible && (window.isKeyWindow || window.attachedSheet?.isKeyWindow == true) { hide() }
+        if window.isVisible && deepestSheet(of: window!).isKeyWindow { hide() }
         else { show() }
     }
     private var hasSheet: Bool { model.showHelp || model.showSettings || window.attachedSheet != nil }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         guard let action = menuItem.action else { return true }
-        if action == #selector(copyResult) { return !hasSheet || model.showHelp }
+        if action == #selector(copyResult) { return !hasSheet || (model.showHelp && window.attachedSheet?.attachedSheet == nil) }
         let scratchActions: [Selector] = [#selector(newScratch), #selector(exportText), #selector(exportMarkdown),
                                           #selector(previousScratch), #selector(nextScratch), #selector(settings), #selector(help)]
         return !scratchActions.contains(action) || !hasSheet
@@ -150,7 +172,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
 
     @objc private func newScratch() { guard !hasSheet else { return }; model.newScratch(); show() }
     @objc private func copyResult() {
-        if model.showHelp { NotificationCenter.default.post(name: Notification.Name("BobbyCopyTutorialAnswer"), object: nil) }
+        if model.showHelp, window.attachedSheet?.attachedSheet == nil { NotificationCenter.default.post(name: Notification.Name("BobbyCopyTutorialAnswer"), object: nil) }
         else if !hasSheet { model.copyCurrentResult() }
     }
     @objc private func exportText() { guard !hasSheet else { return }; model.exportScratch() }

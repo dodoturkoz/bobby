@@ -164,7 +164,7 @@ struct TutorialView: View {
             .padding(.top, 12)
             ScratchEditor(text: $demoText, scratchID: demoID, results: demoResults,
                           onCopy: copyDemoAnswer, onSelection: { selectedLine = $0 },
-                          onHide: { dismiss() })
+                          onHide: { dismiss() }, yearBasis: yearBasis)
                 .accessibilityLabel("Tutorial practice scratch")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
@@ -193,7 +193,7 @@ struct TutorialView: View {
     private var scratchFeatures: some View {
         VStack(spacing: 12) {
             featureRow(icon: "square.stack", title: "A fresh scratch for each thought",
-                       detail: "Use + or ⌘N. Open the sidebar to choose a scratch, or use the arrows to move between them.")
+                       detail: "Use + or ⌘N. Choose a scratch in the sidebar, use the arrows, or swipe left and right with two fingers over the editor.")
             featureRow(icon: "internaldrive", title: "Saved on this Mac",
                        detail: "Bobby saves as you write. Your scratches return when you reopen the app, and stay in place when you hide it.")
             featureRow(icon: "doc.on.doc", title: "Take an answer with you",
@@ -353,9 +353,9 @@ private enum TutorialStep: Int, CaseIterable, Identifiable {
         case .variables:
             return "Use = to give a value a name. Lines below it update when that value changes. Try changing rent from 25k to 30k."
         case .currency:
-            return "Write an amount, its currency, and where to convert it. TL and TRY are interchangeable, including lowercase. These examples use live or cached rates."
+            return "Write a currency pair for its rate, or include an amount to convert. Full currency names work too. Click a suggestion to confirm ambiguous wording."
         case .interest:
-            return "Write simple interest in Turkish or English. The answer is gross interest, with the final balance shown below it. Change the practice year basis to compare."
+            return "Write simple interest in Turkish or English, or try a natural phrase. Bobby asks you to review assumptions and fill in a missing principal before calculating."
         case .scratches:
             return "Start a separate scratch for each question, plan, or quick calculation. Everything you write stays together on your Mac."
         case .shortcuts:
@@ -370,9 +370,9 @@ private enum TutorialStep: Int, CaseIterable, Identifiable {
         case .variables:
             return "rent = 25k TL\nmonths = 12\nrent * months"
         case .currency:
-            return "500 USD to TL\n500 usd to try\n10k TL to EUR"
+            return "USD TL\nTL euro\n3 USD to lira"
         case .interest:
-            return "interest = 500k TL %40 yıllık 32 gün\ninterest * .75\n500k TRY at 40% for 32 days"
+            return "interest = 500k TL %40 yıllık 32 gün\ninterest * .75\n3 years interest at 42%"
         case .scratches, .shortcuts:
             return ""
         }
@@ -385,9 +385,9 @@ private enum TutorialStep: Int, CaseIterable, Identifiable {
         case .variables:
             return "Variables belong to this scratch and apply from their definition downward. Click any answer to copy it."
         case .currency:
-            return "Check the rate date beside each answer. Reference rates can differ from the rate your bank offers. Cached rates keep conversions available offline."
+            return "TL and TRY are interchangeable. The rate source and date appear beside each answer. Hover for provider details. Reference rates can differ from your bank's rate."
         case .interest:
-            return "Interest is principal × annual rate × days ÷ year basis. Multiply by .75 for your own manual adjustment. The practice picker only changes this demo."
+            return "Interest is principal × annual rate × days ÷ year basis. Suggestions need confirmation. Multiply by .75 for your own adjustment. Practice settings only affect this demo."
         case .scratches:
             return "Your existing scratches stay untouched throughout this tour. You can reopen the tutorial whenever you want."
         case .shortcuts:

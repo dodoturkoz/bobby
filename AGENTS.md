@@ -20,6 +20,18 @@ It may be shared with friends later.
 - Accept leading-decimal literals such as `.75` as equivalent to `0.75`.
 - Programmer utilities are not a priority.
 - Keep source text separate from generated results.
+- Treat supported alternative wording as a proposal when its meaning is
+  ambiguous. Confirmation edits only the anchored source line, preserves an
+  assignment, and uses NSTextView's native undo path. Missing interest principal
+  must be entered in review, never inferred. Capture document and scratch identity
+  so a stale review cannot edit a different scratch.
+- Bare currency pairs query the one-unit rate with up to eight decimal places.
+  Monetary conversions retain two-place display rounding. Show source and date
+  inline, with contributing providers and reference quote type in the tooltip.
+- Only the amount part of a conversion carries variable dependencies. Currency
+  codes in its pair must not wait for same-named variables. Preserve existing
+  money expressions such as `EUR USD` when EUR is a defined variable, while
+  explicit `EUR to USD` requests a unit rate.
 - Keep tutorial examples and their year basis in temporary view state. Preview
   calculation must not modify scratches or trigger network work during rendering.
   Prepare missing rates separately and revisit dependent conversions when rates
@@ -72,6 +84,14 @@ It may be shared with friends later.
   has detached. Activation and sheet dismissal can finish asynchronously, so
   retry focus on the main queue and use the window's end-sheet notification.
 - Periodic rate refreshes must enter the main actor before updating app state.
+- Intentional horizontal trackpad gestures navigate saved scratches once at
+  gesture end. Keep vertical scrolling, cancellation, and momentum independent,
+  clamp navigation at the ends, and leave tutorial practice swipes disabled.
+- Use CheckedDecimalMath for multiplication and division. Foundation can return
+  an incorrect finite value at extreme exponents even when it reports success.
+- Descend to the deepest attached sheet for focus and global-shortcut handling.
+  Close an editor's review sheet when it is dismantled, and block background
+  scratch/copy commands while a review is open.
 - Use decimal arithmetic for money and rates. Round for presentation or an
   explicitly defined financial rule rather than at arbitrary intermediate steps.
 - Keep the calculation engine independent from UI and network access.
