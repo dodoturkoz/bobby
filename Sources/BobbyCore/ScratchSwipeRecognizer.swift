@@ -17,10 +17,19 @@ public enum ScratchSwipePhase: Equatable, Sendable {
 public struct ScratchSwipeResponse: Equatable, Sendable {
     public let consumesEvent: Bool
     public let navigation: ScratchNavigationDirection?
+    /// Physical finger motion accumulated after the gesture becomes horizontal.
+    /// Nil means this event should not change the visible page position.
+    public let dragOffset: Double?
+    public let gestureEnded: Bool
+    public let cancelled: Bool
 
-    public init(consumesEvent: Bool = false, navigation: ScratchNavigationDirection? = nil) {
+    public init(consumesEvent: Bool = false, navigation: ScratchNavigationDirection? = nil,
+                dragOffset: Double? = nil, gestureEnded: Bool = false, cancelled: Bool = false) {
         self.consumesEvent = consumesEvent
         self.navigation = navigation
+        self.dragOffset = dragOffset
+        self.gestureEnded = gestureEnded
+        self.cancelled = cancelled
     }
 }
 
@@ -35,10 +44,13 @@ public struct ScratchSwipeRecognizer: Sendable {
     private var horizontalMotion = 0.0
     private var verticalTravel = 0.0
     private let intentThreshold = 10.0
-    private let navigationThreshold = 80.0
+    private let navigationThreshold: Double
     private let horizontalDominance = 1.6
 
-    public init() {}
+    public init(navigationThreshold: Double = 80) {
+        self.navigationThreshold = navigationThreshold.isFinite && navigationThreshold > 0
+            ? navigationThreshold : 80
+    }
 
     /// AppKit applies the user's natural-scrolling inversion to wheel deltas.
     /// Convert that value to physical finger motion without inspecting preferences.
@@ -57,8 +69,9 @@ public struct ScratchSwipeRecognizer: Sendable {
     public mutating func handle(horizontal: Double, vertical: Double,
                                 phase: ScratchSwipePhase, isMomentum: Bool = false) -> ScratchSwipeResponse {
         guard horizontal.isFinite, vertical.isFinite else {
+            let response = cancellationResponse()
             reset()
-            return ScratchSwipeResponse()
+            return response
         }
 
         if isMomentum {
@@ -67,8 +80,9 @@ public struct ScratchSwipeRecognizer: Sendable {
         }
 
         if phase == .mayBegin {
+            let response = cancellationResponse(consumesEvent: false)
             reset()
-            return ScratchSwipeResponse()
+            return response
         }
         if phase == .began {
             reset()
@@ -76,14 +90,22 @@ public struct ScratchSwipeRecognizer: Sendable {
         }
         if phase == .cancelled {
             let consumed = tracking && intent == .horizontal
+            let response = cancellationResponse()
             tracking = false
             consumesMomentum = consumed
-            return ScratchSwipeResponse(consumesEvent: consumed)
+            return response
         }
         guard tracking, phase != .none else { return ScratchSwipeResponse() }
 
-        horizontalMotion += horizontal
-        verticalTravel += abs(vertical)
+        let nextHorizontalMotion = horizontalMotion + horizontal
+        let nextVerticalTravel = verticalTravel + abs(vertical)
+        guard nextHorizontalMotion.isFinite, nextVerticalTravel.isFinite else {
+            let response = cancellationResponse()
+            reset()
+            return response
+        }
+        horizontalMotion = nextHorizontalMotion
+        verticalTravel = nextVerticalTravel
         if intent == .undecided {
             let distance = abs(horizontalMotion)
             if verticalTravel >= intentThreshold && verticalTravel >= distance {
@@ -94,16 +116,27 @@ public struct ScratchSwipeRecognizer: Sendable {
         }
 
         let consumed = intent == .horizontal
-        guard phase == .ended else { return ScratchSwipeResponse(consumesEvent: consumed) }
+        let dragOffset = consumed ? horizontalMotion : nil
+        guard phase == .ended else {
+            return ScratchSwipeResponse(consumesEvent: consumed, dragOffset: dragOffset)
+        }
 
         tracking = false
         consumesMomentum = consumed
         guard consumed,
               abs(horizontalMotion) >= navigationThreshold,
               abs(horizontalMotion) >= verticalTravel * horizontalDominance else {
-            return ScratchSwipeResponse(consumesEvent: consumed)
+            return ScratchSwipeResponse(consumesEvent: consumed, dragOffset: dragOffset,
+                                        gestureEnded: consumed)
         }
         return ScratchSwipeResponse(consumesEvent: true,
-                                    navigation: horizontalMotion < 0 ? .next : .previous)
+                                    navigation: horizontalMotion < 0 ? .next : .previous,
+                                    dragOffset: horizontalMotion, gestureEnded: true)
+    }
+
+    private func cancellationResponse(consumesEvent: Bool = true) -> ScratchSwipeResponse {
+        guard tracking, intent == .horizontal else { return ScratchSwipeResponse() }
+        return ScratchSwipeResponse(consumesEvent: consumesEvent, dragOffset: horizontalMotion,
+                                    gestureEnded: true, cancelled: true)
     }
 }
