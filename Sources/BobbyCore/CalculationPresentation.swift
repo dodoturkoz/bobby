@@ -6,7 +6,10 @@ public enum CalculationPresentation {
         guard evaluation.kind != .error, let value = evaluation.value else {
             return evaluation.title
         }
-        let digits = evaluation.currency != nil || evaluation.kind == .interest ? 2 : 8
+        let digits = evaluation.conversion?.isRateQuery == true ? 8 : (evaluation.currency != nil || evaluation.kind == .interest ? 2 : 8)
+        if let conversion = evaluation.conversion, conversion.isRateQuery {
+            return "1\(suffix(conversion.pair.base)) = \(formatted(value, currency: evaluation.currency, digits: digits))"
+        }
         return formatted(value, currency: evaluation.currency, digits: digits)
     }
 

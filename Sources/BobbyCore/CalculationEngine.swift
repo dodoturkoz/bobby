@@ -18,11 +18,18 @@ public struct CurrencyPair: Hashable, Sendable {
 public struct ConversionRequest: Equatable, Sendable {
     public let amount: Decimal
     public let pair: CurrencyPair
+    public let isRateQuery: Bool
 
-    public init(amount: Decimal, pair: CurrencyPair) {
+    public init(amount: Decimal, pair: CurrencyPair, isRateQuery: Bool = false) {
         self.amount = amount
         self.pair = pair
+        self.isRateQuery = isRateQuery
     }
+}
+
+public enum CalculationSuggestion: Equatable, Sendable {
+    case currency(canonicalExpression: String, question: String)
+    case interest(FinanceSuggestion)
 }
 
 public struct InterestDetails: Equatable, Sendable {
@@ -51,6 +58,7 @@ public struct LineEvaluation: Equatable, Sendable {
         case value
         case interest
         case conversion
+        case suggestion
         case error
     }
 
@@ -60,18 +68,20 @@ public struct LineEvaluation: Equatable, Sendable {
     public var currency: String?
     public var conversion: ConversionRequest?
     public var interest: InterestDetails?
+    public var suggestion: CalculationSuggestion?
     public var title: String
     public var detail: String?
 
     public init(lineIndex: Int, kind: Kind, value: Decimal? = nil, currency: String? = nil,
                 conversion: ConversionRequest? = nil, interest: InterestDetails? = nil,
-                title: String, detail: String? = nil) {
+                title: String, detail: String? = nil, suggestion: CalculationSuggestion? = nil) {
         self.lineIndex = lineIndex
         self.kind = kind
         self.value = value
         self.currency = currency.map(CurrencyPair.canonical)
         self.conversion = conversion
         self.interest = interest
+        self.suggestion = suggestion
         self.title = title
         self.detail = detail
     }
@@ -93,7 +103,28 @@ public struct CalculationEngine: Sendable {
             guard !line.isEmpty else { continue }
             let assignment = Self.assignment(in: line)
             let expression = assignment?.expression ?? line
-            if Lexer(expression).tokens().contains(where: { token in
+            let tokens = Lexer(expression).tokens()
+            var dependencyTokens = tokens
+            let pendingCurrencyVariable: Bool
+            if tokens.count == 2, case .identifier(let name) = tokens[0],
+               case .identifier(let currency) = tokens[1], Currencies.contains(currency),
+               awaitingRates.contains(name.lowercased()) {
+                pendingCurrencyVariable = true
+            } else { pendingCurrencyVariable = false }
+            // A currency code in a conversion is a unit, not a dependency on a
+            // variable with the same spelling. Only inspect the amount expression.
+            if !pendingCurrencyVariable, let currency = CurrencyInputRecognizer.recognize(expression) {
+                switch currency {
+                case .conversion(let amount, _, _): dependencyTokens = Lexer(amount).tokens()
+                case .suggestion(let canonical, _):
+                    if case .conversion(let amount, _, _) = CurrencyInputRecognizer.recognize(canonical) {
+                        dependencyTokens = Lexer(amount).tokens()
+                    }
+                }
+            } else if FinanceInputSuggestions.suggestion(for: expression) != nil {
+                dependencyTokens = []
+            }
+            if dependencyTokens.contains(where: { token in
                 if case .identifier(let name) = token { return awaitingRates.contains(name.lowercased()) }
                 return false
             }) {
@@ -120,7 +151,7 @@ public struct CalculationEngine: Sendable {
                         awaitingRates.remove(assignment.name.lowercased())
                     } else {
                         variables.removeValue(forKey: assignment.name.lowercased())
-                        if result.kind == .conversion {
+                        if result.kind == .conversion || result.kind == .suggestion {
                             awaitingRates.insert(assignment.name.lowercased())
                         } else {
                             awaitingRates.remove(assignment.name.lowercased())
@@ -155,6 +186,14 @@ public struct CalculationEngine: Sendable {
                               isAssignment: Bool) throws -> LineEvaluation? {
         guard !text.isEmpty else { return nil }
 
+        if let proposal = FinanceInputSuggestions.suggestion(for: text) {
+            let draft = proposal.interest
+            return LineEvaluation(lineIndex: lineIndex, kind: .suggestion,
+                                  title: proposal.title,
+                                  detail: "\(draft.principal == nil ? "Add principal · " : "Review · ")\(NumberFormatting.string(draft.annualRatePercent))% yearly · \(draft.duration.displayText)",
+                                  suggestion: .interest(proposal))
+        }
+
         if let pieces = Self.captures(in: text, pattern:
             #"^(.+?)\s+(at)\s+(.+?)\s+for\s+(.+?)\s+days?(?:\s+basis\s+(\d+))?\s*$"#) {
             return try interestResult(principal: pieces[0], rate: pieces[2], days: pieces[3],
@@ -169,17 +208,43 @@ public struct CalculationEngine: Sendable {
                                       lineIndex: lineIndex, variables: variables)
         }
 
-        if let pieces = Self.captures(in: text, pattern:
-            #"^(.+?)\s+([a-z]{3}|tl)\s*(?:\bto\b|->|→)\s*([a-z]{3}|tl)\s*$"#) {
-            let tokens = Lexer(pieces[0]).tokens()
+        let tokens = Lexer(text).tokens()
+        let usesBoundCurrencyVariable: Bool
+        if tokens.count == 2, case .identifier(let name) = tokens[0],
+           case .identifier(let currency) = tokens[1], Currencies.contains(currency), variables[name.lowercased()] != nil {
+            usesBoundCurrencyVariable = true
+        } else {
+            usesBoundCurrencyVariable = false
+        }
+        if !usesBoundCurrencyVariable, let recognition = CurrencyInputRecognizer.recognize(text) {
+            let amountExpression: String
+            let pair: CurrencyPair
+            let isRateQuery: Bool
+            var suggestion: CalculationSuggestion?
+            switch recognition {
+            case .conversion(let expression, let recognizedPair, let rateQuery):
+                amountExpression = expression
+                pair = recognizedPair
+                isRateQuery = rateQuery
+            case .suggestion(let canonicalExpression, let question):
+                guard case .conversion(let expression, let recognizedPair, let rateQuery) = CurrencyInputRecognizer.recognize(canonicalExpression) else { return nil }
+                amountExpression = expression
+                pair = recognizedPair
+                isRateQuery = rateQuery
+                suggestion = .currency(canonicalExpression: canonicalExpression, question: question)
+            }
+            let tokens = Lexer(amountExpression).tokens()
             guard Self.isCalculation(tokens, variables: variables, isAssignment: isAssignment) else { return nil }
             var parser = Parser(tokens: tokens, variables: variables)
             let quantity = try parser.parse()
-            let pair = CurrencyPair(base: pieces[1], quote: pieces[2])
             if let currency = quantity.currency, currency != pair.base {
                 throw CalculationFailure.invalid("The amount's currency must match \(pair.base).")
             }
-            let request = ConversionRequest(amount: quantity.value, pair: pair)
+            if let suggestion, case .currency(let canonical, let question) = suggestion {
+                return LineEvaluation(lineIndex: lineIndex, kind: .suggestion,
+                                      title: question, detail: canonical, suggestion: suggestion)
+            }
+            let request = ConversionRequest(amount: quantity.value, pair: pair, isRateQuery: isRateQuery)
             let rate = pair.base == pair.quote ? Decimal(1) : rates[pair]
             var value: Decimal?
             if let rate {
@@ -198,7 +263,6 @@ public struct CalculationEngine: Sendable {
             return nil
         }
 
-        let tokens = Lexer(text).tokens()
         guard Self.isCalculation(tokens, variables: variables, isAssignment: isAssignment) else { return nil }
         var parser = Parser(tokens: tokens, variables: variables)
         let quantity = try parser.parse()
@@ -554,24 +618,40 @@ private enum DecimalMath {
     }
 
     static func multiply(_ lhs: Decimal, _ rhs: Decimal) throws -> Decimal {
-        try calculate(lhs, rhs, operation: NSDecimalMultiply)
+        do { return try CheckedDecimalMath.multiply(lhs, rhs) }
+        catch { throw CalculationFailure.invalid("The result is outside the supported decimal range.") }
     }
 
     static func divide(_ lhs: Decimal, _ rhs: Decimal) throws -> Decimal {
         guard rhs != 0 else { throw CalculationFailure.invalid("Cannot divide by zero.") }
-        return try calculate(lhs, rhs, operation: NSDecimalDivide)
+        do { return try CheckedDecimalMath.divide(lhs, rhs) }
+        catch { throw CalculationFailure.invalid("The result is outside the supported decimal range.") }
     }
 
     static func power(_ value: Decimal, _ exponent: Int) throws -> Decimal {
+        guard exponent < 0 else { return try positivePower(value, exponent) }
+        guard value != 0 else { throw CalculationFailure.invalid("Cannot divide by zero.") }
+        do {
+            // Retain the ordinary path so recurring reciprocals are rounded only
+            // after exponentiation, rather than once per intermediate product.
+            return try divide(1, positivePower(value, -exponent))
+        } catch {
+            // The positive power can underflow even when its reciprocal is
+            // representable, for example .01^-65 = 1e130.
+            return try positivePower(divide(1, value), -exponent)
+        }
+    }
+
+    private static func positivePower(_ value: Decimal, _ exponent: Int) throws -> Decimal {
         var result = Decimal(1)
         var factor = value
-        var remaining = abs(exponent)
+        var remaining = exponent
         while remaining > 0 {
             if remaining % 2 == 1 { result = try multiply(result, factor) }
             remaining /= 2
             if remaining > 0 { factor = try multiply(factor, factor) }
         }
-        return exponent < 0 ? try divide(1, result) : result
+        return result
     }
 
     private static func calculate(_ lhs: Decimal, _ rhs: Decimal,
