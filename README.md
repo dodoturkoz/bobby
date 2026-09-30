@@ -3,6 +3,9 @@
 Bobby is a small macOS scratchpad for quick maths, currency conversions, and
 simple interest. Type a calculation, see the answer, and keep notes alongside it.
 
+Bobby was vibe coded with AI assistance. It's an experimental personal project,
+so double-check important calculations.
+
 Open it with a keyboard shortcut whenever you need a little room for your
 numbers. Keep separate scratches for different thoughts, with everything saved
 on your Mac.
