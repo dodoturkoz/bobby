@@ -23,6 +23,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private var statusItem: NSStatusItem!
     private let shortcut = GlobalShortcut()
     private var rateTimer: Timer?
+    private var tutorialDismissalMonitor: Any?
+    private var tutorialOutsideAppMonitor: Any?
     private var subscriptions = Set<AnyCancellable>()
     private let windowLog = Logger(subsystem: "com.dodoturkoz.bobby", category: "Window")
 
@@ -39,6 +41,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
             onHide: { [weak self] in self?.hide() }, onFocusScratch: { [weak self] in self?.focusEditor(preferScratch: true) }))
         window.center()
         window.setFrameAutosaveName("BobbyScratchWindow")
+        tutorialDismissalMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] event in
+            guard let self, self.model.showHelp, let sheet = self.window.attachedSheet,
+                  event.window === self.window else { return event }
+            let location = self.window.convertPoint(toScreen: event.locationInWindow)
+            guard !sheet.frame.contains(location) else { return event }
+            self.windowLog.notice("Tutorial dismissed by a background click")
+            self.model.showHelp = false
+            return nil
+        }
+        tutorialOutsideAppMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .otherMouseDown]) { [weak self] _ in
+            guard let self, self.model.showHelp, self.window.isVisible,
+                  self.window.attachedSheet != nil else { return }
+            self.windowLog.notice("Tutorial dismissed by a click in another app")
+            self.model.showHelp = false
+        }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = NSImage(systemSymbolName: "b.circle", accessibilityDescription: "Bobby")
         statusItem.button?.toolTip = "Bobby, your finance scratchpad"
@@ -71,7 +88,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         show()
     }
 
-    func applicationWillTerminate(_ notification: Notification) { rateTimer?.invalidate(); model?.flushSave() }
+    func applicationWillTerminate(_ notification: Notification) {
+        rateTimer?.invalidate()
+        if let tutorialDismissalMonitor { NSEvent.removeMonitor(tutorialDismissalMonitor) }
+        if let tutorialOutsideAppMonitor { NSEvent.removeMonitor(tutorialOutsideAppMonitor) }
+        model?.flushSave()
+    }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
     func windowShouldClose(_ sender: NSWindow) -> Bool { hide(); return false }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { show(); return true }

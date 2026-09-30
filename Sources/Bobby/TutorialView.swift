@@ -73,8 +73,14 @@ struct TutorialView: View {
                 Text("A quick tour, with room to try things.").font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
-            Button { dismiss() } label: { Image(systemName: "xmark") }
-                .buttonStyle(.borderless)
+            Button { dismiss() } label: {
+                Label("Close", systemImage: "xmark")
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(minWidth: 62, minHeight: 24)
+            }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .frame(minHeight: 32)
                 .help("Close tutorial")
                 .accessibilityLabel("Close tutorial")
                 .keyboardShortcut(.cancelAction)

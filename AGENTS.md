@@ -25,6 +25,12 @@ It may be shared with friends later.
   Prepare missing rates separately and revisit dependent conversions when rates
   arrive. Route copy-answer to the tutorial and block background scratch commands
   while a sheet is open.
+- The tutorial closes on a parent-window click or a mouse click in another app.
+  Consume the parent-window click so it cannot operate saved-scratch controls.
+  Match the parent window explicitly, so tutorial picker/menu windows remain
+  usable, and check the sheet's screen bounds so the opening click cannot dismiss
+  it. Monitor mouse clicks only, and preserve the tour during keyboard app
+  switching. Remove event monitors when the app terminates.
 - Save scratches locally and preserve them across hides and restarts.
 - Keep financial assumptions visible, including exchange-rate date and type,
   and interest day-count conventions.

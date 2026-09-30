@@ -63,7 +63,8 @@ maths, variables, currency, simple interest, scratches, and shortcuts. The first
 four include editable examples with live answers and reset controls. Currency
 practice supports rate refresh, and interest practice has its own year picker.
 Tutorial examples and settings do not change your saved scratches. Escape
-closes the tutorial, and Command+Shift+C copies the selected practice answer.
+or a click outside closes the tutorial. The labeled Close button is also
+available, and Command+Shift+C copies the selected practice answer.
 
 ## Keyboard and storage
 
