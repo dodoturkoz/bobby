@@ -100,6 +100,8 @@ It may be shared with friends later.
 - Native UI regression tests render AppKit views offscreen, with no visible
   windows or changes to saved scratches. Keep physical trackpad direction and
   animation feel in the manual checks in QA.md.
+- Repository screenshots should use sample data. Restore the user's scratch
+  contents and selected scratch after preparing a capture.
 - Use CheckedDecimalMath for multiplication and division. Foundation can return
   an incorrect finite value at extreme exponents even when it reports success.
 - Descend to the deepest attached sheet for focus and global-shortcut handling.

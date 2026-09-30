@@ -10,6 +10,8 @@ Open it with a keyboard shortcut whenever you need a little room for your
 numbers. Keep separate scratches for different thoughts, with everything saved
 on your Mac.
 
+![Bobby showing arithmetic, reusable values, a currency conversion, and simple interest](docs/images/bobby.png)
+
 ## Examples
 
 ```text
