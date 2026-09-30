@@ -36,7 +36,20 @@ It may be shared with friends later.
 
 - Build a native Swift app for macOS 14 or later, with SwiftUI for surrounding
   controls and AppKit for the editor.
-- No application scaffold exists, so no build or test commands exist yet.
+- SwiftPM has no third-party dependencies. `BobbyCore` owns calculation,
+  presentation, exchange rates, and persistence. `Bobby` owns the native UI.
+- Run `scripts/test.sh` for tests and `scripts/build-app.sh` for a release app
+  (or pass `debug`). The bundle is `build/Bobby.app`, ignored by Git.
+- `scripts/run-app.sh` builds and opens a debug app. Xcode can open Package.swift.
+- Build helpers keep SwiftPM/module caches inside `.build`. On restricted
+  macOS sandboxes, `iconutil` needs system service access to package the icon.
+- Scratch and rate data live in `~/Library/Application Support/Bobby/`.
+  Unreadable scratch data must never be replaced silently.
+- Percentage values are scalars (`10%` is `0.1`). Display rounding must not alter
+  stored/evaluated decimals. Currency and interest show at most two decimals.
+- Currency variables wait for their rate, then recalculate in source order.
+- Default global shortcut: Control+Option+B. Registration uses Carbon hotkeys,
+  so it does not require Accessibility permission.
 - Use decimal arithmetic for money and rates. Round for presentation or an
   explicitly defined financial rule rather than at arbitrary intermediate steps.
 - Keep the calculation engine independent from UI and network access.

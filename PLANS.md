@@ -7,9 +7,9 @@ calculations. Turkish finance terminology and useful local conventions are part
 of the intended experience. The first audience is the owner, with possible
 distribution to friends later.
 
-Status: first-release scope, input conventions, and native architecture are
-agreed. Repository setup and planning are complete. Application implementation
-has not started.
+Status: the first native implementation is built and its automated tests pass.
+Editor, arithmetic, interest, local persistence, and currency conversion are
+implemented. Interactive app verification and final packaging are in progress.
 
 ## Agreed decisions
 
@@ -33,7 +33,7 @@ has not started.
 - Native Swift macOS app targeting macOS 14 or later, with SwiftUI surrounding
   an AppKit editor.
 
-## Proposed first release
+## First release
 
 1. Instant scratchpad: global shortcut, floating window, hide/show, independent
    scratches, local autosave and recovery, copy results, text/Markdown export.
@@ -85,16 +85,38 @@ before any deductions.
   editable source text.
 - Keep the agreed English punctuation rules consistent across every helper.
 
+Resolved implementation choices:
+
+- A continuous AppKit plain-text editor with aligned result buttons in a right
+  gutter. Copying an answer does not insert it into the source text.
+- Ordered assignments use `name = expression`. Trailing `=` is not required
+  for evaluation. Unresolved currency assignments wait for rate data.
+- Postfix percentage is a scalar (`10% = 0.1`), with standard arithmetic
+  precedence and integer powers. Mixed-currency addition requires conversion.
+- English/Turkish simple-interest patterns support an explicit `basis 360`
+  override as well as the global 360/365/366-day setting.
+- Versioned JSON with atomic writes stores scratches. Corrupt or newer files
+  are preserved and autosave pauses instead of replacing them.
+- Frankfurter blended reference quotes refresh after six hours or on explicit
+  request. A failed request can fall back to dated local cache.
+- Default shortcut is Control+Option+B, with alternative presets in Settings.
+- SwiftPM builds the dependency-free app. Packaging creates a local, ad-hoc
+  signed `build/Bobby.app` for the host architecture.
+
 ## Milestones
 
 1. Completed: settle scope, input conventions, and native architecture, and
    record the agreed contract here.
-2. Build the native editor shell with local saving and keyboard behavior.
-3. Add and test arithmetic, ordered variables, and live result presentation.
-4. Add and test simple interest with visible assumptions.
-5. Add exchange-rate fetching, caching, attribution, and offline behavior.
-6. Use Bobby for real daily calculations, address friction, and package a local
-   app. Discuss signing and distribution when sharing becomes relevant.
+2. Implemented: native editor shell, local saving, independent scratches, and
+   keyboard commands. Interactive behavior is under verification.
+3. Implemented and tested: arithmetic, ordered variables, live results, and
+   copyable numerical presentation.
+4. Implemented and tested: simple interest with visible assumptions.
+5. Implemented and tested: exchange-rate fetching, caching, attribution, and
+   offline behavior. The actual provider route was also verified.
+6. In progress: interactive app verification and release packaging. Next, use
+   Bobby for daily calculations and address friction. Discuss notarization,
+   supported architectures, and distribution when sharing becomes relevant.
 
 ## Deferred features
 
