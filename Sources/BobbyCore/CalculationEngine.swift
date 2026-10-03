@@ -58,6 +58,7 @@ public struct LineEvaluation: Equatable, Sendable {
         case value
         case interest
         case conversion
+        case gold
         case suggestion
         case error
     }
@@ -69,12 +70,14 @@ public struct LineEvaluation: Equatable, Sendable {
     public var conversion: ConversionRequest?
     public var interest: InterestDetails?
     public var suggestion: CalculationSuggestion?
+    public var gold: GoldRequest?
     public var title: String
     public var detail: String?
 
     public init(lineIndex: Int, kind: Kind, value: Decimal? = nil, currency: String? = nil,
                 conversion: ConversionRequest? = nil, interest: InterestDetails? = nil,
-                title: String, detail: String? = nil, suggestion: CalculationSuggestion? = nil) {
+                title: String, detail: String? = nil, suggestion: CalculationSuggestion? = nil,
+                gold: GoldRequest? = nil) {
         self.lineIndex = lineIndex
         self.kind = kind
         self.value = value
@@ -82,6 +85,7 @@ public struct LineEvaluation: Equatable, Sendable {
         self.conversion = conversion
         self.interest = interest
         self.suggestion = suggestion
+        self.gold = gold
         self.title = title
         self.detail = detail
     }
@@ -93,7 +97,8 @@ public struct CalculationEngine: Sendable {
     public init() {}
 
     public func evaluate(_ text: String, yearBasis: Int = 365,
-                         rates: [CurrencyPair: Decimal] = [:]) -> [LineEvaluation] {
+                         rates: [CurrencyPair: Decimal] = [:],
+                         goldQuotes: [GoldProduct: GoldQuote] = [:]) -> [LineEvaluation] {
         var variables: [String: Quantity] = [:]
         var awaitingRates: Set<String> = []
         var results: [LineEvaluation] = []
@@ -113,7 +118,9 @@ public struct CalculationEngine: Sendable {
             } else { pendingCurrencyVariable = false }
             // A currency code in a conversion is a unit, not a dependency on a
             // variable with the same spelling. Only inspect the amount expression.
-            if !pendingCurrencyVariable, let currency = CurrencyInputRecognizer.recognize(expression) {
+            if case .gold(_, let quantity, let side) = GoldInputRecognizer.recognize(expression) {
+                dependencyTokens = assignment != nil && side == nil ? [] : Lexer(quantity).tokens()
+            } else if !pendingCurrencyVariable, let currency = CurrencyInputRecognizer.recognize(expression) {
                 switch currency {
                 case .conversion(let amount, _, _): dependencyTokens = Lexer(amount).tokens()
                 case .suggestion(let canonical, _):
@@ -136,7 +143,7 @@ public struct CalculationEngine: Sendable {
             }
             do {
                 guard var result = try evaluateLine(expression, lineIndex: lineIndex,
-                                                    yearBasis: yearBasis, rates: rates,
+                                                    yearBasis: yearBasis, rates: rates, goldQuotes: goldQuotes,
                                                     variables: variables,
                                                     isAssignment: assignment != nil) else {
                     if let assignment {
@@ -151,7 +158,7 @@ public struct CalculationEngine: Sendable {
                         awaitingRates.remove(assignment.name.lowercased())
                     } else {
                         variables.removeValue(forKey: assignment.name.lowercased())
-                        if result.kind == .conversion || result.kind == .suggestion {
+                        if result.kind == .conversion || result.kind == .suggestion || result.kind == .gold {
                             awaitingRates.insert(assignment.name.lowercased())
                         } else {
                             awaitingRates.remove(assignment.name.lowercased())
@@ -182,9 +189,39 @@ public struct CalculationEngine: Sendable {
     }
 
     private func evaluateLine(_ text: String, lineIndex: Int, yearBasis: Int,
-                              rates: [CurrencyPair: Decimal], variables: [String: Quantity],
+                              rates: [CurrencyPair: Decimal], goldQuotes: [GoldProduct: GoldQuote],
+                              variables: [String: Quantity],
                               isAssignment: Bool) throws -> LineEvaluation? {
         guard !text.isEmpty else { return nil }
+
+        if case .gold(let product, let quantityExpression, let side) = GoldInputRecognizer.recognize(text) {
+            guard !isAssignment || side != nil else {
+                throw CalculationFailure.invalid("Choose a gold quote side for an assignment, for example ceyrek altin buy or ceyrek altin sell (dealer prices).")
+            }
+            let tokens = Lexer(quantityExpression).tokens()
+            guard Self.isCalculation(tokens, variables: variables, isAssignment: isAssignment) else { return nil }
+            var parser = Parser(tokens: tokens, variables: variables)
+            let quantity = try parser.parse()
+            guard quantity.currency == nil else {
+                throw CalculationFailure.invalid("Gold quantities must be plain numbers, not money amounts.")
+            }
+            guard quantity.value >= 0 else {
+                throw CalculationFailure.invalid("Gold quantities must be zero or greater.")
+            }
+            let request = GoldRequest(product: product, quantity: quantity.value, side: side)
+            var value: Decimal?
+            if let quote = goldQuotes[product] {
+                guard quote.product == product, !quote.dealerBuy.isNaN, !quote.dealerSell.isNaN,
+                      quote.dealerBuy > 0, quote.dealerSell > 0, quote.dealerBuy <= quote.dealerSell else {
+                    throw CalculationFailure.invalid("The gold source returned an invalid quote for this product.")
+                }
+                if let side {
+                    value = try DecimalMath.multiply(quantity.value, side == .dealerBuy ? quote.dealerBuy : quote.dealerSell)
+                }
+            }
+            return LineEvaluation(lineIndex: lineIndex, kind: .gold, value: value, currency: "TRY",
+                                  title: product.displayName, gold: request)
+        }
 
         if let proposal = FinanceInputSuggestions.suggestion(for: text) {
             let draft = proposal.interest
