@@ -94,3 +94,8 @@ UI automation may emit an additional foreign-app click after an accessibility
 button action. Such a click intentionally dismisses the tutorial. Confirm that
 case with window-event logs or a physical click, rather than changing production
 dismissal behavior to accommodate synthetic input.
+
+Select observed native menu items directly during automation. Keyboard menu
+navigation can reach the editor instead. Compare source contents before and
+after, retain the baseline until mismatches are explained, and undo unintended
+edits without replacing the user's intervening changes.

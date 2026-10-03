@@ -115,6 +115,10 @@ It may be shared with friends later.
 - Native UI regression tests render AppKit views offscreen, with no visible
   windows or changes to saved scratches. Keep physical trackpad direction and
   animation feel in the manual checks in QA.md.
+- Before native UI automation, retain a source/selection baseline until any
+  mismatch is explained. Never restore an old baseline over the user's edits.
+  Select observed native menu items directly, since synthetic menu navigation
+  keys can reach the editor instead. Undo and verify unintended source edits.
 - Repository screenshots should use sample data. Restore the user's scratch
   contents and selected scratch after preparing a capture.
 - Use CheckedDecimalMath for multiplication and division. Foundation can return
