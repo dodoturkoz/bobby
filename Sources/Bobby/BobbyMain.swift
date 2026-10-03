@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
     private var statusItem: NSStatusItem!
     private let shortcut = GlobalShortcut()
     private var rateTimer: Timer?
+    private var goldTimer: Timer?
     private var tutorialDismissalMonitor: Any?
     private var tutorialOutsideAppMonitor: Any?
     private var tutorialPresentedAt: TimeInterval?
@@ -92,13 +93,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, NSMe
         model.$isPinned.sink { [weak self] pinned in self?.window.level = pinned ? .floating : .normal }
             .store(in: &subscriptions)
         rateTimer = Timer.scheduledTimer(withTimeInterval: 900, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in self?.model.refreshRates(force: false) }
+            Task { @MainActor [weak self] in
+                guard let self, self.window.isVisible, !self.window.isMiniaturized else { return }
+                self.model.refreshRates(force: false)
+            }
+        }
+        goldTimer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.window.isVisible, !self.window.isMiniaturized else { return }
+                self.model.refreshGoldPrices()
+            }
         }
         show()
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         rateTimer?.invalidate()
+        goldTimer?.invalidate()
         if let tutorialDismissalMonitor { NSEvent.removeMonitor(tutorialDismissalMonitor) }
         if let tutorialOutsideAppMonitor { NSEvent.removeMonitor(tutorialOutsideAppMonitor) }
         model?.flushSave()

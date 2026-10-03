@@ -3,7 +3,7 @@
 Run `scripts/test.sh` before committing a behavior change. The suite exercises
 decimal calculations, strict numbers, source-order variables, incomplete typing,
 currency names and confirmations, interest review, line edits, gesture lifecycle,
-rate presentation and offline caching, and persistence recovery. Offscreen AppKit
+rate and gold-price presentation, offline caching, and persistence recovery. Offscreen AppKit
 tests verify paging snapshots, clipping, editor handoff, cancellation, and native
 Undo. Tests use deterministic quotes rather than today's changing prices.
 
@@ -28,6 +28,32 @@ the original wording. Rate answer copying must copy a value with its currency,
 and a unit rate must retain its extra precision. Hover for contributing providers
 and the reference quote type. Verify cached results label offline status after a
 failed refresh, without changing system network settings for routine checks.
+
+## Gold
+
+| Input | Expected behavior |
+| --- | --- |
+| `ceyrek altin` or `çeyrek altın` | Both dealer prices for one Çeyrek coin in TL |
+| `2 ceyrek altin` | Both product prices multiplied by two |
+| `eski ceyrek altin` | Separate Eski Çeyrek listing, no invented mint year |
+| `gram altin` | Retail Gram Altın listing, distinct from other gram/bullion quotes |
+| `value = gram altin sell` then `value * 2` | Scalar TRY value, dependent line recalculates after lookup |
+| `value = ceyrek altin` | Ask for an explicit dealer side, no implicitly assigned price |
+| `1,23 gram altin` | English-number error, no price fetch |
+| `I have 2 ceyrek altin` | Ordinary note |
+
+Check both labels explain the dealer's perspective, with full source and quote
+time beneath them. Longer quantities should wrap the two prices without hiding
+one side. Hover for the exact provider product, source URL, observation/retrieval
+times, and Europe/Istanbul convention. Copying both prices retains their labels
+and provenance. Explicit-side copy remains a scalar TL value.
+
+Refresh from More. The app checks visible-scratch gold prices every minute,
+and labels observations over 15 minutes old. Deterministic tests verify that
+failed refreshes retain dated prices with a saved label, and that no-cache
+failures show an unavailable result rather than a fabricated amount. Previewing
+neighboring scratches must not trigger network requests. The tour's gold
+practice must stay isolated from saved scratches.
 
 ## Interest review
 

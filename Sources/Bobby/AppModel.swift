@@ -12,6 +12,7 @@ struct DisplayResult: Equatable {
     let copyText: String?
     var suggestion: CalculationSuggestion? = nil
     var sourceLine: String? = nil
+    var usesCompactValue = false
 }
 
 @MainActor
@@ -32,10 +33,14 @@ final class AppModel: ObservableObject {
 
     private let store: ScratchStore
     private let rates: ExchangeRateStore
+    private let goldPrices: GoldPriceStore
     private let engine = CalculationEngine()
     private var quotes: [CurrencyPair: RateLookup] = [:]
     private var rateErrors: [CurrencyPair: String] = [:]
     private var requests: [CurrencyPair: Task<Void, Never>] = [:]
+    private var goldQuotes: [GoldProduct: GoldLookup] = [:]
+    private var goldErrors: [GoldProduct: String] = [:]
+    private var goldRequests: [GoldProduct: Task<Void, Never>] = [:]
     private var saveTask: Task<Void, Never>?
     private var feedbackTask: Task<Void, Never>?
     private var persistenceEnabled = true
@@ -51,11 +56,12 @@ final class AppModel: ObservableObject {
     interest * .75
     """
 
-    init() {
-        let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+    init(directory: URL? = nil, rates: ExchangeRateStore? = nil, goldPrices: GoldPriceStore? = nil) {
+        let directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Bobby", isDirectory: true)
         store = ScratchStore(fileURL: directory.appendingPathComponent("scratches.json"))
-        rates = ExchangeRateStore(cacheURL: directory.appendingPathComponent("exchange-rates.json"))
+        self.rates = rates ?? ExchangeRateStore(cacheURL: directory.appendingPathComponent("exchange-rates.json"))
+        self.goldPrices = goldPrices ?? GoldPriceStore(cacheURL: directory.appendingPathComponent("gold-prices.json"))
         shortcutChoice = UserDefaults.standard.string(forKey: "globalShortcut") ?? "controlOptionB"
         let scratch = Scratch(text: Self.welcome)
         collection = ScratchCollection(scratches: [scratch], selectedID: scratch.id, yearBasis: 365)
@@ -188,8 +194,19 @@ final class AppModel: ObservableObject {
     func refreshRates(force: Bool = true) {
         rateErrors = [:]
         let pairs = Set(engine.evaluate(currentText, yearBasis: collection.yearBasis,
-                                       rates: quotes.mapValues { $0.quote.rate }).compactMap { $0.conversion?.pair })
+                                       rates: quotes.mapValues { $0.quote.rate },
+                                       goldQuotes: goldQuotes.mapValues { $0.quote }).compactMap { $0.conversion?.pair })
         for pair in pairs { request(pair, force: force) }
+        refreshGoldPrices(force: force)
+        recalculate()
+    }
+
+    func refreshGoldPrices(force: Bool = false) {
+        goldErrors = [:]
+        let products = Set(engine.evaluate(currentText, yearBasis: collection.yearBasis,
+                                          rates: quotes.mapValues { $0.quote.rate },
+                                          goldQuotes: goldQuotes.mapValues { $0.quote }).compactMap { $0.gold?.product })
+        for product in products { requestGold(product, force: force) }
         recalculate()
     }
 
@@ -228,18 +245,49 @@ final class AppModel: ObservableObject {
 
     func preparePreviewRates(for text: String, yearBasis: Int, forceRefresh: Bool = false) {
         let pairs = Set(engine.evaluate(text, yearBasis: yearBasis,
-                                       rates: quotes.mapValues { $0.quote.rate }).compactMap { $0.conversion?.pair })
+                                       rates: quotes.mapValues { $0.quote.rate },
+                                       goldQuotes: goldQuotes.mapValues { $0.quote }).compactMap { $0.conversion?.pair })
         for pair in pairs where forceRefresh || (quotes[pair] == nil && rateErrors[pair] == nil) {
             if forceRefresh { rateErrors[pair] = nil }
             request(pair, force: forceRefresh)
+        }
+        let products = Set(engine.evaluate(text, yearBasis: yearBasis,
+                                          rates: quotes.mapValues { $0.quote.rate },
+                                          goldQuotes: goldQuotes.mapValues { $0.quote }).compactMap { $0.gold?.product })
+        for product in products where forceRefresh || (goldQuotes[product] == nil && goldErrors[product] == nil) {
+            if forceRefresh { goldErrors[product] = nil }
+            requestGold(product, force: forceRefresh)
         }
     }
 
     private func renderedResults(for text: String, yearBasis: Int, requestMissingRates: Bool) -> [DisplayResult] {
         let sourceLines = text.components(separatedBy: "\n")
         let evaluations = engine.evaluate(text, yearBasis: yearBasis,
-                                          rates: quotes.mapValues { $0.quote.rate })
+                                          rates: quotes.mapValues { $0.quote.rate },
+                                          goldQuotes: goldQuotes.mapValues { $0.quote })
         return evaluations.map { evaluation in
+            if let gold = evaluation.gold, evaluation.kind != .error {
+                let product = gold.product
+                if let lookup = goldQuotes[product] {
+                    do {
+                        let display = try GoldPricePresentation.make(request: gold, lookup: lookup,
+                                                                    isRefreshing: goldRequests[product] != nil)
+                        return DisplayResult(lineIndex: evaluation.lineIndex, text: display.valueText, detail: display.detail,
+                                             tooltip: display.tooltip, isError: false, copyText: display.copyText,
+                                             usesCompactValue: display.showsBothSides)
+                    } catch {
+                        return DisplayResult(lineIndex: evaluation.lineIndex, text: "Calculation error", detail: "Check the quantity or price",
+                                             tooltip: error.localizedDescription, isError: true, copyText: nil)
+                    }
+                }
+                if let error = goldErrors[product] {
+                    return DisplayResult(lineIndex: evaluation.lineIndex, text: "Gold price unavailable", detail: "Refresh to retry",
+                                         tooltip: error, isError: true, copyText: nil)
+                }
+                if requestMissingRates { requestGold(product) }
+                return DisplayResult(lineIndex: evaluation.lineIndex, text: "Getting gold price…", detail: "Altınkaynak · \(product.providerName)",
+                                     tooltip: "Fetching the dealer's dated buy and sell prices in TL.", isError: false, copyText: nil)
+            }
             if let conversion = evaluation.conversion {
                 let pair = conversion.pair
                 if let lookup = quotes[pair] {
@@ -283,6 +331,22 @@ final class AppModel: ObservableObject {
                 rateErrors[pair] = error.localizedDescription
             }
             requests[pair] = nil
+            recalculate()
+        }
+    }
+
+    private func requestGold(_ product: GoldProduct, force: Bool = false) {
+        if goldRequests[product] != nil { return }
+        goldRequests[product] = Task {
+            do {
+                let lookup = try await goldPrices.lookup(for: product, forceRefresh: force)
+                guard !Task.isCancelled else { return }
+                goldQuotes[product] = lookup
+                goldErrors[product] = nil
+            } catch {
+                goldErrors[product] = error.localizedDescription
+            }
+            goldRequests[product] = nil
             recalculate()
         }
     }

@@ -220,8 +220,17 @@ final class ResultTextView: NSTextView {
             button.alignment = .left
             let paragraph = NSMutableParagraphStyle()
             paragraph.lineBreakMode = .byTruncatingTail
-            let title = NSMutableAttributedString(string: result.text, attributes: [
-                .font: result.suggestion == nil ? NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold) : NSFont.systemFont(ofSize: 12, weight: .semibold),
+            var displayedText = result.text
+            var valueFont = result.suggestion == nil ? NSFont.monospacedDigitSystemFont(ofSize: result.usesCompactValue ? 13 : 15, weight: .semibold) : NSFont.systemFont(ofSize: 12, weight: .semibold)
+            if result.usesCompactValue,
+               (result.text as NSString).size(withAttributes: [.font: valueFont]).width > button.cell!.titleRect(forBounds: button.bounds).width,
+               let separator = result.text.range(of: " · Dealer sell ") {
+                displayedText.replaceSubrange(separator, with: " TL\nDealer sell ")
+                valueFont = NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold)
+                button.frame.size.height = 44
+            }
+            let title = NSMutableAttributedString(string: displayedText, attributes: [
+                .font: valueFont,
                 .foregroundColor: result.isError ? NSColor.systemOrange : NSColor.systemTeal,
                 .paragraphStyle: paragraph
             ])

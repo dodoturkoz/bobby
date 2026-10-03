@@ -21,6 +21,7 @@ rent = 25000
 rent * 12
 500 USD to TL
 TL euro
+ceyrek altin
 interest = 500k TL at 40% for 32 days
 interest * .75
 ```
@@ -35,6 +36,12 @@ interpretation for you to review.
 Currency conversions show their source and date. These are reference rates,
 which may differ from your bank's quote. Cached rates remain available offline,
 and you can refresh them from the More menu.
+
+Turkish gold lookups show both dealer buy and sell prices in TL, with the source
+and quote time. Try `ceyrek altin`, `2 ceyrek altin`, or `gram altin`. These are
+[Altınkaynak's quotes](https://www.altinkaynak.com/Araclar/Servisler), so prices
+may differ at another dealer. Hover to see what each price means. Saved and older
+quotes are labeled, and the More menu lets you refresh them.
 
 Interest calculations show gross interest and the final balance before
 deductions. They use simple interest with a visible year basis, initially 365
@@ -87,7 +94,7 @@ scripts/test.sh
 ```
 
 Bobby uses SwiftUI around an AppKit text editor, with no third-party dependencies.
-`Sources/BobbyCore` holds calculations, exchange rates, and storage.
+`Sources/BobbyCore` holds calculations, exchange rates, gold prices, and storage.
 `Sources/Bobby` holds the native app. Tests cover both the core and offscreen
 editor behavior.
 

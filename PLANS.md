@@ -31,8 +31,9 @@ live examples and isolation from saved scratches have been verified.
   basis initially.
 - Omit stopaj and dedicated tax helpers from the first release. Manual
   deductions use ordinary arithmetic.
-- Gold prices per gram and TCMB deposit-rate data are useful candidates for
-  later additions, not requirements for the first draft.
+- Turkish gold product lookup is an accepted addition, with both dealer buy
+  and sell prices, exact product assumptions, source, and quote time visible.
+- TCMB deposit-rate data remains a candidate for later, not a requirement.
 - Native Swift macOS app targeting macOS 14 or later, with SwiftUI surrounding
   an AppKit editor.
 
@@ -54,6 +55,11 @@ live examples and isolation from saved scratches have been verified.
    phrases produce explicit review proposals. Show rate attribution inline and
    support interactive horizontal trackpad paging between scratches, with live
    movement, neighboring previews, threshold completion, and edge resistance.
+7. Gold lookup: quarter, half, full, Ata, and retail gram gold in TL, with
+   separately named old quarter/half/full listings. Default to both dealer prices.
+   Quantities multiply actual product quotes. Explicit buy/sell suffixes support
+   scalar assignments. Keep provider timestamps and saved/older quote labels
+   visible, with local cache and controlled refreshes.
 
 Accepted input examples:
 
@@ -62,6 +68,9 @@ Accepted input examples:
 500 USD to TL
 500 tl to usd
 500k TL %40 yıllık 32 gün
+ceyrek altin
+2 ceyrek altin
+gold = gram altin sell
 ```
 
 Manual adjustments use ordinary arithmetic and can reference an earlier
@@ -116,6 +125,14 @@ Resolved implementation choices:
   are preserved and autosave pauses instead of replacing them.
 - Frankfurter blended reference quotes refresh after six hours or on explicit
   request. A failed request can fall back to dated local cache.
+- Altınkaynak's advertised public gold board supplies named dealer prices.
+  Standard Çeyrek is PC, explicitly old Çeyrek is EC, and retail Gram Altın is
+  PGA. Do not merge similarly named gram listings or infer mint year. These
+  indicative TL quotes are dealer-specific, with no promise of a nationwide
+  executable price. Feed timestamps use Europe/Istanbul. Cache exact decimal
+  strings, share one board request across products, refresh after a minute,
+  and retry after a minute on failure. The app polls visible scratches every
+  minute and offers manual refresh. Observation age over 15 minutes is labeled.
 - Default shortcut is Control+Option+B, with alternative presets in Settings.
 - SwiftPM builds the dependency-free app. Packaging creates a local, ad-hoc
   signed `build/Bobby.app` for the host architecture.
@@ -138,6 +155,9 @@ Resolved implementation choices:
    Next, use Bobby for daily calculations and address friction. Discuss
    notarization, supported architectures, and distribution when sharing becomes
    relevant.
+7. Implemented and tested: Turkish dealer gold lookup, dual-price presentation,
+   quantities, explicit scalar-side assignments, dated offline cache, and a tour
+   example. Live public quotes and native result layout have been verified.
 
 ## Deferred features
 
@@ -152,20 +172,22 @@ scope. Compounding is also deferred initially.
 
 Future reference-data candidates:
 
-- Gold price per gram in TL: settle the source, purity, quote type (buy, sell, or
-  reference), and observation timestamp before integrating a feed.
 - TCMB deposit-interest data: settle the relevant series, currency, term, and
   observation dates before integrating it. Treat these sector averages as dated
   benchmarks, not individual bank offers. TCMB's methodology annualizes and
   compounds rates, so do not silently insert them into the simple-interest
   calculator without an explicit conversion/convention.
 
-Neither data feed is required for the first draft.
+This benchmark feed is not required for the first draft.
 
 ## Background sources
 
 - [Frankfurter documentation](https://frankfurter.dev/): candidate currency
   service, provider filtering, attribution, and rate semantics.
+- [Altınkaynak public services](https://www.altinkaynak.com/Araclar/Servisler):
+  published gold board, dealer buy/sell product listings, and update timestamps.
+- [Darphane coin specifications](https://www.darphane.gov.tr/cumhuriyet-altini-uretimi):
+  background on distinct Turkish ziynet and sikke gold coin products.
 - [GIB 2026 temporary Article 67 guide](https://cdn.gib.gov.tr/api/gibportal-file/file/getFile?objectKey=DUYURU%2FUNIVERSAL%2F2026%2F2026_Gecici67.pdf):
   background showing that withholding treatment depends on context and dates.
   This is not an automatically maintained source of current rates.

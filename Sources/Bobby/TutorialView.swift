@@ -137,7 +137,7 @@ struct TutorialView: View {
                     Spacer()
                 }
                 if step == .currency {
-                    Button("Refresh rates") {
+                    Button("Refresh prices") {
                         model.preparePreviewRates(for: demoText, yearBasis: yearBasis, forceRefresh: true)
                     }
                     .buttonStyle(.borderless)
@@ -328,7 +328,7 @@ private enum TutorialStep: Int, CaseIterable, Identifiable {
         switch self {
         case .math: return "Maths"
         case .variables: return "Variables"
-        case .currency: return "Currency"
+        case .currency: return "Rates & gold"
         case .interest: return "Interest"
         case .scratches: return "Scratches"
         case .shortcuts: return "Shortcuts"
@@ -339,7 +339,7 @@ private enum TutorialStep: Int, CaseIterable, Identifiable {
         switch self {
         case .math: return "Think on the page. Bobby does the maths."
         case .variables: return "Name a number, then build on it."
-        case .currency: return "From dollars to TL, in one line."
+        case .currency: return "Look up a rate or a gold price."
         case .interest: return "A small space for finance calculations."
         case .scratches: return "Keep your thoughts within reach."
         case .shortcuts: return "Bobby is a shortcut away."
@@ -353,7 +353,7 @@ private enum TutorialStep: Int, CaseIterable, Identifiable {
         case .variables:
             return "Use = to give a value a name. Lines below it update when that value changes. Try changing rent from 25k to 30k."
         case .currency:
-            return "Write a currency pair for its rate, or include an amount to convert. Full currency names work too. Click a suggestion to confirm ambiguous wording."
+            return "Write a currency pair for its rate, or add an amount to convert. Try ceyrek altin for a Turkish gold coin's dealer buy and sell prices."
         case .interest:
             return "Write simple interest in Turkish or English, or try a natural phrase. Bobby asks you to review assumptions and fill in a missing principal before calculating."
         case .scratches:
@@ -370,7 +370,7 @@ private enum TutorialStep: Int, CaseIterable, Identifiable {
         case .variables:
             return "rent = 25k TL\nmonths = 12\nrent * months"
         case .currency:
-            return "USD TL\nTL euro\n3 USD to lira"
+            return "USD TL\n3 USD to lira\nceyrek altin"
         case .interest:
             return "interest = 500k TL %40 yıllık 32 gün\ninterest * .75\n3 years interest at 42%"
         case .scratches, .shortcuts:
@@ -385,7 +385,7 @@ private enum TutorialStep: Int, CaseIterable, Identifiable {
         case .variables:
             return "Variables belong to this scratch and apply from their definition downward. Click any answer to copy it."
         case .currency:
-            return "TL and TRY are interchangeable. The rate source and date appear beside each answer. Hover for provider details. Reference rates can differ from your bank's rate."
+            return "Sources and quote times stay visible. Gold buy means what the dealer pays you, sell means what you pay. Hover for details. Reference currency rates can differ from your bank's rate."
         case .interest:
             return "Interest is principal × annual rate × days ÷ year basis. Suggestions need confirmation. Multiply by .75 for your own adjustment. Practice settings only affect this demo."
         case .scratches:

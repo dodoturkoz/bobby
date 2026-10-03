@@ -76,7 +76,7 @@ struct ContentView: View {
                 Button("Export text…") { model.exportScratch() }
                 Button("Export Markdown…") { model.exportScratch(markdown: true) }
                 Divider()
-                Button("Refresh exchange rates") { model.refreshRates() }
+                Button("Refresh prices and rates") { model.refreshRates() }
                 Button("Settings…") { model.showSettings = true }
                 Button("Take a tour") { model.showHelp = true }
                 Divider()

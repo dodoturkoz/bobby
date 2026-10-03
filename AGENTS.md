@@ -37,6 +37,8 @@ It may be shared with friends later.
   Prepare missing rates separately and revisit dependent conversions when rates
   arrive. Route copy-answer to the tutorial and block background scratch commands
   while a sheet is open.
+  Keep the standard practice examples to three rows so complete answers and
+  provenance fit without scrolling at the tutorial's fixed window size.
 - The tutorial closes on a parent-window click or a mouse click in another app.
   Consume the parent-window click so it cannot operate saved-scratch controls.
   Match the parent window explicitly, so tutorial picker/menu windows remain
@@ -48,8 +50,17 @@ It may be shared with friends later.
   and interest day-count conventions.
 - Stopaj and KDV helpers are deferred from the first release. Manual deductions
   use ordinary arithmetic. Do not silently choose statutory tax rates.
-- Gold prices per gram and TCMB deposit-rate data are optional future additions,
-  not requirements for the first draft.
+- Gold lookups show both dealer buy (you receive) and dealer sell (you pay) by
+  default. An assignment requires an explicit buy/alis or sell/satis suffix,
+  never an implicitly selected price. Only the quantity carries dependencies.
+  Turkish coin products and retail gram gold use Altınkaynak's named public
+  product quotes in TL. Do not derive coin prices from metal weight or infer
+  mint year. Preserve distinct old-coin listings and the PGA gram listing.
+  Show source and observation time inline. Interpret feed timestamps in
+  Europe/Istanbul, label quotes over 15 minutes old, and mark failed-refresh
+  cache fallback. The public board fetch sends no scratch text or quantities,
+  coalesces product requests, and refreshes no more than once per minute.
+- TCMB deposit-rate data remains an optional future addition.
 - Simple interest uses actual elapsed days with a visible, editable 365-day year
   basis initially. Do not assume compounding.
 - Number-format conventions must be explicit. Do not guess between ambiguous
@@ -84,6 +95,10 @@ It may be shared with friends later.
   has detached. Activation and sheet dismissal can finish asynchronously, so
   retry focus on the main queue and use the window's end-sheet notification.
 - Periodic rate refreshes must enter the main actor before updating app state.
+  Refresh gold prices every minute while the window is visible, and preserve
+  network-free preview rendering. Gold cache decimals use exact strings.
+  Compact dual-price results wrap into two labeled lines when necessary,
+  retaining complete values and provenance for copying and Accessibility.
 - Intentional horizontal trackpad gestures slide a clipped preview of adjacent
   scratches and navigate once after release past a viewport-relative threshold.
   Keep one live editor beneath snapshot layers so short swipes preserve selection
